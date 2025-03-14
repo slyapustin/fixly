@@ -34,6 +34,35 @@ Fixly is a Chrome extension that helps you fix and improve text in any input fie
 4. Click the "Fix" button to improve your text
 5. The improved text will replace your original text in the input field
 
+## Building from Source
+
+To build the .crx file from source:
+
+1. Clone this repository:
+   ```
+   git clone https://github.com/yourusername/fixly.git
+   cd fixly
+   ```
+
+2. Open Chrome and navigate to `chrome://extensions/`
+
+3. Enable "Developer mode" (toggle in the top-right corner)
+
+4. Click "Pack extension" button
+
+5. In the "Extension root directory" field, select the `src` folder from this repository
+
+6. Leave the "Private key file" field empty if this is your first time building (Chrome will generate a new key)
+   - For subsequent builds, use the .pem file generated from the first build
+
+7. Click "Pack Extension"
+
+8. Chrome will generate a .crx file and a .pem file
+   - The .crx file is your packaged extension
+   - The .pem file is your private key (keep this secure for future updates)
+
+9. You can now distribute the .crx file or use it for installation as described in the Installation section
+
 ## Privacy
 
 - Your API key is stored locally in your browser
