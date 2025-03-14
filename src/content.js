@@ -10,7 +10,7 @@ function addFixButton(element) {
 
     let button = document.createElement("span");
     button.innerText = "✨";
-    button.style.padding = "4px 8px";
+    button.style.padding = "0"; // Remove padding since we're using fixed width/height with flexbox
     button.style.cursor = "pointer";
     button.style.zIndex = "99999"; // Increased z-index
     button.style.margin = "5px";
@@ -21,6 +21,13 @@ function addFixButton(element) {
     button.style.backgroundColor = "rgba(255, 255, 255, 0.9)"; // Add background
     button.style.borderRadius = "50%"; // Make it circular
     button.style.boxShadow = "0 2px 5px rgba(0,0,0,0.2)"; // Add shadow for visibility
+    button.style.height = "30px"; // Increased fixed height
+    button.style.width = "30px"; // Increased fixed width
+    button.style.lineHeight = "30px"; // Align text vertically
+    button.style.textAlign = "center"; // Center text horizontally
+    button.style.display = "inline-flex"; // Use flexbox for better centering
+    button.style.alignItems = "center"; // Center vertically with flexbox
+    button.style.justifyContent = "center"; // Center horizontally with flexbox
     button.title = "Fix text with AI";
     button.className = "fixly-button";
 
@@ -80,7 +87,7 @@ function addFixButton(element) {
         window.addEventListener("resize", updatePosition);
 
         // Also update position periodically to handle dynamic changes
-        const positionInterval = setInterval(updatePosition, 500); // More frequent updates
+        const positionInterval = setInterval(updatePosition, 500);
 
         // Clean up when element is removed
         const cleanupEvents = () => {
@@ -114,7 +121,7 @@ function addFixButton(element) {
                 element.classList.contains("t-normal"))) {
 
             // Force button to be visible for LinkedIn message composers
-            button.style.display = "inline-block";
+            button.style.display = "inline-flex";
             console.log("Forcing button visibility for LinkedIn message composer");
 
             // Also ensure the button is positioned correctly
@@ -160,7 +167,7 @@ function addFixButton(element) {
 
         // Show button only if there's actual content
         if (content.length > 0) {
-            button.style.display = "inline-block";
+            button.style.display = "inline-flex";
             console.log("Showing button for element with content:", content.substring(0, 20) + "...");
         } else {
             button.style.display = "none";
@@ -194,6 +201,9 @@ function addFixButton(element) {
             textContent = element.value;
         }
 
+        // Store original text for undo functionality
+        element._fixlyOriginalText = textContent;
+
         // Get API key from Chrome storage
         chrome.storage.sync.get(['openai_api_key'], (result) => {
             if (!result.openai_api_key) {
@@ -214,6 +224,11 @@ function addFixButton(element) {
                         // For LinkedIn and other complex editors, use a more careful approach
                         // First, focus the element to ensure it's active
                         element.focus();
+
+                        // Store the original text for undo functionality
+                        if (!element._fixlyOriginalText) {
+                            element._fixlyOriginalText = element.innerText || element.textContent;
+                        }
 
                         // Clear the current content
                         // Use selection and execCommand for better compatibility with rich text editors
@@ -289,7 +304,69 @@ function addFixButton(element) {
                                 }, 50);
                             }
                         }
+
+                        // Add undo event listener if not already added
+                        if (!element._fixlyUndoListenerAdded) {
+                            element._fixlyUndoListenerAdded = true;
+
+                            // Create the handler function and store it for later removal
+                            element._fixlyUndoHandler = function (e) {
+                                // Check for Ctrl+Z or Cmd+Z (Mac)
+                                if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+                                    // If we have stored original text, restore it
+                                    if (element._fixlyOriginalText) {
+                                        e.preventDefault(); // Prevent default undo behavior
+
+                                        if (element.isContentEditable || element.getAttribute("contenteditable") === "true") {
+                                            // For contenteditable elements
+                                            // Use selection and execCommand for better compatibility
+                                            if (document.createRange && window.getSelection) {
+                                                // Modern browsers
+                                                const range = document.createRange();
+                                                range.selectNodeContents(element);
+                                                const selection = window.getSelection();
+                                                selection.removeAllRanges();
+                                                selection.addRange(range);
+
+                                                // Delete the current content
+                                                document.execCommand('delete', false, null);
+
+                                                // Insert the original content
+                                                document.execCommand('insertText', false, element._fixlyOriginalText);
+                                            } else {
+                                                // Fallback for older browsers
+                                                element.innerText = element._fixlyOriginalText;
+                                            }
+
+                                            // Dispatch input event to trigger any listeners
+                                            const inputEvent = new Event('input', { bubbles: true });
+                                            element.dispatchEvent(inputEvent);
+                                        } else {
+                                            // For regular inputs and textareas
+                                            element.value = element._fixlyOriginalText;
+
+                                            // Trigger input event
+                                            const inputEvent = new Event('input', { bubbles: true });
+                                            element.dispatchEvent(inputEvent);
+                                        }
+
+                                        // Clear the stored original text after using it once
+                                        element._fixlyOriginalText = null;
+
+                                        // Check content after undoing
+                                        checkContent();
+                                    }
+                                }
+                            };
+
+                            element.addEventListener('keydown', element._fixlyUndoHandler);
+                        }
                     } else {
+                        // Store the original text for undo functionality
+                        if (!element._fixlyOriginalText) {
+                            element._fixlyOriginalText = element.value;
+                        }
+
                         element.value = response.fixedText;
 
                         // Trigger input event for regular inputs
@@ -309,6 +386,7 @@ function addFixButton(element) {
         function resetButtonState() {
             button.innerText = originalText;
             button.style.cursor = "pointer";
+            button.style.display = "inline-flex"; // Ensure display is set to inline-flex
             // Restore hover effects
             button.onmouseover = () => {
                 button.style.transform = "scale(1.2)";
@@ -327,6 +405,12 @@ function addFixButton(element) {
             element.removeEventListener("input", checkContent);
             element.removeEventListener("change", checkContent);
             element.removeEventListener("keyup", checkContent);
+
+            // Remove undo event listener if it was added
+            if (element._fixlyUndoListenerAdded) {
+                element.removeEventListener('keydown', element._fixlyUndoHandler);
+                element._fixlyUndoListenerAdded = false;
+            }
 
             // Call cleanup function if it exists
             if (typeof element._fixlyCleanup === "function") {
@@ -386,7 +470,7 @@ function addLinkedInFixes() {
                             if (Math.abs(btnRect.left - (rect.right - 40)) < 50 &&
                                 Math.abs(btnRect.top - (rect.top + 10)) < 50) {
                                 // Make button visible for LinkedIn message composers
-                                btn.style.display = "inline-block";
+                                btn.style.display = "inline-flex";
                             }
                         });
                     }
@@ -603,12 +687,19 @@ function addLinkedInMessageComposerButton() {
                 button.style.position = "absolute";
                 button.style.zIndex = "999999";
                 button.style.fontSize = "22px";
-                button.style.padding = "5px 10px";
+                button.style.padding = "0"; // Remove padding since we're using fixed width/height with flexbox
                 button.style.cursor = "pointer";
                 button.style.backgroundColor = "rgba(255, 255, 255, 0.9)";
                 button.style.borderRadius = "50%";
                 button.style.boxShadow = "0 2px 5px rgba(0,0,0,0.2)";
                 button.style.userSelect = "none";
+                button.style.height = "32px"; // Increased fixed height
+                button.style.width = "32px"; // Increased fixed width
+                button.style.lineHeight = "32px"; // Align text vertically
+                button.style.textAlign = "center"; // Center text horizontally
+                button.style.display = "inline-flex"; // Use flexbox for better centering
+                button.style.alignItems = "center"; // Center vertically with flexbox
+                button.style.justifyContent = "center"; // Center horizontally with flexbox
                 button.title = "Fix text with AI";
                 button.className = "fixly-direct-button";
 
@@ -680,6 +771,7 @@ function addLinkedInMessageComposerButton() {
 
                             // Reset button
                             button.innerText = originalText;
+                            button.style.display = "inline-flex"; // Ensure display is set to inline-flex
                         });
                     });
                 });

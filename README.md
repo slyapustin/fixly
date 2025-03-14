@@ -8,6 +8,7 @@ Fixly is a Chrome extension that adds a fix button (✨) to text input fields, t
 - Uses OpenAI API to fix and improve text
 - Works on most websites, including LinkedIn, Gmail, and other sites with rich text editors
 - Customizable model selection (GPT-4o-mini by default)
+- Undo functionality: Press Ctrl+Z (Windows/Linux) or Cmd+Z (Mac) to revert AI changes
 
 ## Installation
 
@@ -29,6 +30,7 @@ Fixly is a Chrome extension that adds a fix button (✨) to text input fields, t
 6. Type some text in an input field or contenteditable element
 7. Look for the ✨ button that appears near the element
 8. Click the button to fix and improve your text
+9. If you want to revert the changes, press Ctrl+Z (Windows/Linux) or Cmd+Z (Mac) immediately after the AI makes changes
 
 ## Debugging
 
@@ -63,6 +65,13 @@ If the fix button doesn't appear on contenteditable elements, try the following:
 - Check the console for API error messages
 - Make sure you have an internet connection
 
+### Undo Functionality Not Working
+
+- Make sure to press Ctrl+Z (Windows/Linux) or Cmd+Z (Mac) while the text field is still in focus
+- The undo functionality only works once per AI fix
+- Some complex editors might override the standard undo behavior
+- Try clicking in the field again if the focus was lost
+
 ## Technical Details
 
 The extension works by:
@@ -72,6 +81,7 @@ The extension works by:
 3. When clicked, sending the text to the background script
 4. The background script calls the OpenAI API to fix the text
 5. The fixed text is then inserted back into the original element
+6. The original text is stored temporarily to enable undo functionality
 
 ## License
 
