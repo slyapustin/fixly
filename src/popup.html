@@ -3,6 +3,7 @@
 
 <head>
     <title>Fixly Settings</title>
+    <meta charset="UTF-8">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -33,6 +34,17 @@
             box-sizing: border-box;
             border: 1px solid #ccc;
             border-radius: 4px;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            resize: vertical;
+            font-family: Arial, sans-serif;
+            font-size: 13px;
         }
 
         button {
@@ -78,11 +90,17 @@
             background-color: #e8f0fe;
             border-radius: 4px;
             font-size: 12px;
+            line-height: 1.4;
         }
 
         .feature-info h3 {
             margin-top: 0;
             font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .feature-info p {
+            margin: 6px 0;
         }
 
         .model-info {
@@ -90,6 +108,20 @@
             font-size: 11px;
             color: #666;
             font-style: italic;
+        }
+
+        .small-button {
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .small-button:hover {
+            background-color: #3367d6;
         }
     </style>
 </head>
@@ -114,15 +146,27 @@
         </div>
     </div>
 
+    <div class="form-group">
+        <label for="systemPromptInput">System Prompt:</label>
+        <textarea id="systemPromptInput" rows="4" placeholder="Enter custom instructions for the AI..."></textarea>
+        <div style="display: flex; justify-content: flex-end; margin-top: 5px;">
+            <button id="resetPrompt" class="small-button">Reset to Default</button>
+        </div>
+        <div class="model-info">
+            Edit the system prompt to customize how the AI processes your text. The default prompt is pre-filled.
+        </div>
+    </div>
+
     <button id="saveKey">Save Settings</button>
 
     <div id="status" class="status"></div>
 
     <div class="feature-info">
-        <h3>🆕 New Features!</h3>
+        <h3><span style="font-weight: bold;">&#x1F195; New Features!</span></h3>
         <p>Fixly now works with rich text editors like LinkedIn messages, Gmail, and other platforms that use
             contenteditable elements.</p>
-        <p>The sparkles emoji (✨) will appear inside your message box only when you've typed something - click it to
+        <p>The sparkles emoji (&#x2728;) will appear inside your message box only when you've typed something - click it
+            to
             magically fix your text!</p>
         <p>Smarter text processing: if your text is already perfect, Fixly will keep it unchanged instead of showing
             error messages.</p>

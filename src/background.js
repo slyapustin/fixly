@@ -12,11 +12,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         // Store original text for comparison
         const originalText = request.text.trim();
 
-        // Get the model from storage or use default
-        chrome.storage.sync.get(['openai_model'], (result) => {
+        // Get the model and system prompt from storage or use defaults
+        chrome.storage.sync.get(['openai_model', 'system_prompt'], (result) => {
             // Use the selected model or default to gpt-4o-mini
             const model = result.openai_model || 'gpt-4o-mini';
             console.log("Using model:", model);
+
+            // Default system prompt if none is set
+            const defaultSystemPrompt = "You are a helpful assistant that improves text. Fix grammar, spelling, punctuation, and improve clarity and conciseness without changing the meaning or tone. If the text is already correct or if you can't identify any issues to fix, return the EXACT original text unchanged. Never return explanations, error messages, or quotes - only return the fixed text or the original text if no fixes are needed.";
+
+            // Use custom system prompt or default
+            const systemPrompt = result.system_prompt || defaultSystemPrompt;
+            console.log("Using system prompt:", systemPrompt.substring(0, 30) + "...");
 
             fetch("https://api.openai.com/v1/chat/completions", {
                 method: "POST",
@@ -29,7 +36,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     messages: [
                         {
                             role: "system",
-                            content: "You are a helpful assistant that improves text. Fix grammar, spelling, punctuation, and improve clarity and conciseness without changing the meaning or tone. If the text is already correct or if you can't identify any issues to fix, return the EXACT original text unchanged. Never return explanations, error messages, or quotes - only return the fixed text or the original text if no fixes are needed."
+                            content: systemPrompt
                         },
                         {
                             role: "user",
