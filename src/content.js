@@ -1,7 +1,7 @@
 function addFixButton(element) {
     // Check if button already exists for this element
     // Use hasAttribute to check if the attribute exists at all
-    if (element.hasAttribute("data-fixly-button-added")) {
+    if (element.hasAttribute("data-fixly-button-added") || element.hasAttribute("data-fixly-direct-button")) {
         console.log("Button already exists for element, skipping");
         return;
     }
@@ -577,8 +577,8 @@ function processElements() {
         }
     });
 
-    // Apply LinkedIn-specific fixes
-    if (window.location.hostname.includes("linkedin.com")) {
+    // Apply LinkedIn-specific fixes - but only if we're not using the direct button approach
+    if (window.location.hostname.includes("linkedin.com") && !window.fixlyUsingDirectButtons) {
         addLinkedInFixes();
     }
 }
@@ -586,29 +586,18 @@ function processElements() {
 // Initial processing with delay to ensure page is fully loaded
 setTimeout(processElements, 1000);
 
-// For LinkedIn, add additional processing with longer delays
-// LinkedIn can be slow to initialize its components
+// For LinkedIn, we'll use either the direct button approach OR the standard approach, not both
 if (window.location.hostname.includes("linkedin.com")) {
-    console.log("LinkedIn detected, adding additional processing delays");
+    console.log("LinkedIn detected, setting up LinkedIn-specific handling");
 
-    // Process multiple times with increasing delays
-    setTimeout(() => {
-        console.log("LinkedIn additional processing - 2 seconds");
-        processElements();
-        addLinkedInFixes();
-    }, 2000);
+    // Set a flag to indicate we're using the direct button approach
+    window.fixlyUsingDirectButtons = true;
 
-    setTimeout(() => {
-        console.log("LinkedIn additional processing - 5 seconds");
-        processElements();
-        addLinkedInFixes();
-    }, 5000);
+    // Initial call with delay
+    setTimeout(addLinkedInMessageComposerButton, 2000);
 
-    // Add a more aggressive interval for LinkedIn
-    setInterval(() => {
-        console.log("LinkedIn periodic check");
-        addLinkedInFixes();
-    }, 1000);
+    // Periodic calls for the direct button approach
+    setInterval(addLinkedInMessageComposerButton, 3000);
 }
 
 // Monitor for dynamically added elements
@@ -626,8 +615,8 @@ const observer = new MutationObserver((mutations) => {
     if (shouldProcess) {
         processElements();
 
-        // Apply LinkedIn-specific fixes if on LinkedIn
-        if (window.location.hostname.includes("linkedin.com")) {
+        // Apply LinkedIn-specific fixes if on LinkedIn - but only if not using direct buttons
+        if (window.location.hostname.includes("linkedin.com") && !window.fixlyUsingDirectButtons) {
             addLinkedInFixes();
         }
     }
@@ -645,8 +634,8 @@ observer.observe(document.body, {
 setInterval(() => {
     processElements();
 
-    // Apply LinkedIn-specific fixes if on LinkedIn
-    if (window.location.hostname.includes("linkedin.com")) {
+    // Apply LinkedIn-specific fixes if on LinkedIn - but only if not using direct buttons
+    if (window.location.hostname.includes("linkedin.com") && !window.fixlyUsingDirectButtons) {
         addLinkedInFixes();
     }
 }, 2000);
@@ -658,6 +647,22 @@ console.log("Fixly extension loaded and running");
 // This is a more aggressive approach that bypasses the normal detection
 function addLinkedInMessageComposerButton() {
     console.log("Attempting direct button addition to LinkedIn message composer");
+
+    // First, clean up any existing direct buttons to prevent duplicates
+    document.querySelectorAll('.fixly-direct-button').forEach(button => {
+        // Check if the button's associated element still exists
+        const rect = button.getBoundingClientRect();
+        const elementsAtPoint = document.elementsFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+        const hasAssociatedElement = elementsAtPoint.some(el =>
+            el.hasAttribute("data-fixly-direct-button") ||
+            el.hasAttribute("data-fixly-button-added")
+        );
+
+        // If no associated element exists, remove the button
+        if (!hasAssociatedElement) {
+            button.remove();
+        }
+    });
 
     // Try to find the message composer using various selectors
     const selectors = [
@@ -673,8 +678,8 @@ function addLinkedInMessageComposerButton() {
             console.log(`Found ${elements.length} elements matching ${selector}`);
 
             elements.forEach(element => {
-                // Skip if already processed
-                if (element.hasAttribute("data-fixly-direct-button")) {
+                // Skip if already processed by either method
+                if (element.hasAttribute("data-fixly-direct-button") || element.hasAttribute("data-fixly-button-added")) {
                     return;
                 }
 
@@ -813,11 +818,64 @@ function addLinkedInMessageComposerButton() {
     }
 }
 
-// Call the direct button addition function for LinkedIn
-if (window.location.hostname.includes("linkedin.com")) {
-    // Initial call
-    setTimeout(addLinkedInMessageComposerButton, 2000);
+// Function to clean up orphaned buttons
+function cleanupOrphanedButtons() {
+    console.log("Cleaning up orphaned buttons");
 
-    // Periodic calls
-    setInterval(addLinkedInMessageComposerButton, 3000);
+    // Clean up fixly-button elements
+    document.querySelectorAll('.fixly-button').forEach(button => {
+        // Check if the button is still visible and has an associated element
+        const rect = button.getBoundingClientRect();
+
+        // If the button is not visible (zero size or off-screen), remove it
+        if (rect.width === 0 || rect.height === 0 ||
+            rect.left < 0 || rect.top < 0 ||
+            rect.right > window.innerWidth || rect.bottom > window.innerHeight) {
+            console.log("Removing off-screen or zero-size button");
+            button.remove();
+            return;
+        }
+
+        // Check if there's an element with our data attribute near the button
+        const elementsAtPoint = document.elementsFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+        const hasAssociatedElement = elementsAtPoint.some(el =>
+            el.hasAttribute("data-fixly-button-added") ||
+            el.hasAttribute("data-fixly-direct-button")
+        );
+
+        if (!hasAssociatedElement) {
+            console.log("Removing orphaned button with no associated element");
+            button.remove();
+        }
+    });
+
+    // Clean up fixly-direct-button elements
+    document.querySelectorAll('.fixly-direct-button').forEach(button => {
+        // Check if the button is still visible and has an associated element
+        const rect = button.getBoundingClientRect();
+
+        // If the button is not visible (zero size or off-screen), remove it
+        if (rect.width === 0 || rect.height === 0 ||
+            rect.left < 0 || rect.top < 0 ||
+            rect.right > window.innerWidth || rect.bottom > window.innerHeight) {
+            console.log("Removing off-screen or zero-size direct button");
+            button.remove();
+            return;
+        }
+
+        // Check if there's an element with our data attribute near the button
+        const elementsAtPoint = document.elementsFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+        const hasAssociatedElement = elementsAtPoint.some(el =>
+            el.hasAttribute("data-fixly-direct-button") ||
+            el.hasAttribute("data-fixly-button-added")
+        );
+
+        if (!hasAssociatedElement) {
+            console.log("Removing orphaned direct button with no associated element");
+            button.remove();
+        }
+    });
 }
+
+// Run the cleanup periodically
+setInterval(cleanupOrphanedButtons, 5000);
