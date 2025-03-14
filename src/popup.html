@@ -2,14 +2,134 @@
 <html>
 
 <head>
-    <title>Set API Key</title>
-    <script src="popup.js"></script>
+    <title>Fixly Settings</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            width: 300px;
+            padding: 15px;
+            margin: 0;
+        }
+
+        h2 {
+            color: #333;
+            margin-top: 0;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input[type="text"],
+        select {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        button {
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background-color: #3367d6;
+        }
+
+        .status {
+            margin-top: 10px;
+            padding: 8px;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .key-info {
+            margin-top: 15px;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .feature-info {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #e8f0fe;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .feature-info h3 {
+            margin-top: 0;
+            font-size: 14px;
+        }
+
+        .model-info {
+            margin-top: 5px;
+            font-size: 11px;
+            color: #666;
+            font-style: italic;
+        }
+    </style>
 </head>
 
 <body>
-    <h3>Enter OpenAI API Key</h3>
-    <input type="text" id="apiKeyInput" placeholder="API Key" />
-    <button id="saveKey">Save</button>
+    <h2>Fixly Settings</h2>
+
+    <div class="form-group">
+        <label for="apiKeyInput">OpenAI API Key:</label>
+        <input type="text" id="apiKeyInput" placeholder="sk-..." />
+        <div class="key-info">
+            Your API key is stored locally and is only sent to OpenAI when fixing text.
+            <a href="https://platform.openai.com/api-keys" target="_blank">Get an API key</a>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label for="modelInput">AI Model:</label>
+        <input type="text" id="modelInput" placeholder="gpt-4o-mini" />
+        <div class="model-info">
+            Default: gpt-4o-mini. Other options: gpt-4o, gpt-4, gpt-3.5-turbo, or any new OpenAI model.
+        </div>
+    </div>
+
+    <button id="saveKey">Save Settings</button>
+
+    <div id="status" class="status"></div>
+
+    <div class="feature-info">
+        <h3>🆕 New Features!</h3>
+        <p>Fixly now works with rich text editors like LinkedIn messages, Gmail, and other platforms that use
+            contenteditable elements.</p>
+        <p>The sparkles emoji (✨) will appear inside your message box only when you've typed something - click it to
+            magically fix your text!</p>
+        <p>Smarter text processing: if your text is already perfect, Fixly will keep it unchanged instead of showing
+            error messages.</p>
+        <p>Custom model support: Enter any OpenAI model name to use the latest models as soon as they're released.</p>
+    </div>
+
+    <script src="popup.js"></script>
 </body>
 
 </html>
