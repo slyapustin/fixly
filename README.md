@@ -1,84 +1,81 @@
-# Fixly
+# Fixly - Text Fixer Chrome Extension
 
-Fixly is a Chrome extension that helps you fix and improve text in any input field on the web using OpenAI's GPT-4 model.
+Fixly is a Chrome extension that adds a fix button (✨) to text input fields, textareas, and contenteditable elements. When clicked, it uses OpenAI's API to fix grammar, spelling, and improve the text.
 
 ## Features
 
-- Adds a "Fix" button next to text inputs and textareas on any webpage
-- Automatically corrects grammar, spelling, and improves text clarity
-- Uses OpenAI's powerful GPT-4 model for high-quality text improvements
-- Simple and intuitive user interface
-- Works on any website
+- Adds a fix button to text inputs, textareas, and contenteditable elements
+- Uses OpenAI API to fix and improve text
+- Works on most websites, including LinkedIn, Gmail, and other sites with rich text editors
+- Customizable model selection (GPT-4o-mini by default)
 
 ## Installation
 
-1. Download the extension from the Chrome Web Store (coming soon)
-   
-   OR
-   
-   Install manually:
-   - Download the latest release (.crx file)
-   - Open Chrome and go to `chrome://extensions/`
-   - Enable "Developer mode" (toggle in the top-right corner)
-   - Drag and drop the .crx file onto the extensions page
+### Development Installation
 
-2. After installation, click on the Fixly icon in your browser toolbar
-3. Enter your OpenAI API key and click "Save"
-   - You can get an API key from [OpenAI's platform](https://platform.openai.com/api-keys)
-
-## Usage
-
-1. Navigate to any website with text input fields
-2. You'll see a "Fix" button appear next to text inputs and textareas
-3. Type your text in the input field
-4. Click the "Fix" button to improve your text
-5. The improved text will replace your original text in the input field
-
-## Building from Source
-
-To build the .crx file from source:
-
-1. Clone this repository:
-   ```
-   git clone https://github.com/yourusername/fixly.git
-   cd fixly
-   ```
-
+1. Clone this repository or download the source code
 2. Open Chrome and navigate to `chrome://extensions/`
+3. Enable "Developer mode" in the top right corner
+4. Click "Load unpacked" and select the `src` folder from this repository
+5. The extension should now be installed and visible in your extensions list
 
-3. Enable "Developer mode" (toggle in the top-right corner)
+### Usage
 
-4. Click "Pack extension" button
+1. Click on the extension icon to open the popup
+2. Enter your OpenAI API key (starts with `sk-`)
+3. Select your preferred model (default is `gpt-4o-mini`)
+4. Click "Save Settings"
+5. Navigate to any website with text inputs or contenteditable elements
+6. Type some text in an input field or contenteditable element
+7. Look for the ✨ button that appears near the element
+8. Click the button to fix and improve your text
 
-5. In the "Extension root directory" field, select the `src` folder from this repository
+## Debugging
 
-6. Leave the "Private key file" field empty if this is your first time building (Chrome will generate a new key)
-   - For subsequent builds, use the .pem file generated from the first build
+If the fix button doesn't appear on contenteditable elements, try the following:
 
-7. Click "Pack Extension"
+1. Open Chrome DevTools (F12 or right-click > Inspect)
+2. Go to the Console tab to check for any error messages
+3. Look for log messages from the extension (they start with "Fixly")
+4. Make sure the extension has permission to run on the current website
+5. Try reloading the page after the extension is loaded
+6. Test with the included `test.html` file to verify the extension works correctly
 
-8. Chrome will generate a .crx file and a .pem file
-   - The .crx file is your packaged extension
-   - The .pem file is your private key (keep this secure for future updates)
+### Testing with test.html
 
-9. You can now distribute the .crx file or use it for installation as described in the Installation section
+1. Open the `test.html` file in Chrome
+2. The page contains various types of contenteditable elements
+3. Verify that the fix button appears when you type in each element
+4. If the button appears in the test page but not on other websites, there might be specific issues with those websites
 
-## Privacy
+## Troubleshooting
 
-- Your API key is stored locally in your browser
-- Text is sent directly to OpenAI's API from your browser
-- No data is stored on any servers
+### Fix Button Not Appearing
 
-## Development
+- Make sure you've entered text in the field (buttons only appear when there's content)
+- Some websites use complex editors that might prevent the button from appearing
+- Try clicking in and out of the field to trigger the button
+- Check the console for any error messages
 
-This extension is built using:
-- JavaScript
-- Chrome Extension Manifest V3
-- OpenAI API
+### Button Appears But Doesn't Work
+
+- Verify your OpenAI API key is correct and has sufficient credits
+- Check the console for API error messages
+- Make sure you have an internet connection
+
+## Technical Details
+
+The extension works by:
+
+1. Injecting a content script that scans the page for text inputs and contenteditable elements
+2. Adding a fix button next to these elements
+3. When clicked, sending the text to the background script
+4. The background script calls the OpenAI API to fix the text
+5. The fixed text is then inserted back into the original element
 
 ## License
 
-MIT
+MIT License
 
 ## Support
 

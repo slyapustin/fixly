@@ -4,7 +4,8 @@
     "version": "1.0",
     "description": "Fix your text in input fields using OpenAI API.",
     "permissions": [
-        "storage"
+        "storage",
+        "activeTab"
     ],
     "host_permissions": [
         "https://api.openai.com/*"
@@ -20,7 +21,8 @@
             "js": [
                 "content.js"
             ],
-            "run_at": "document_idle"
+            "run_at": "document_end",
+            "all_frames": true
         }
     ],
     "action": {

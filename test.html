@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fixly Extension Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .container {
+            margin-bottom: 30px;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 5px;
+        }
+
+        h2 {
+            margin-top: 0;
+        }
+
+        .editor {
+            border: 1px solid #ccc;
+            min-height: 100px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+
+        .linkedin-style {
+            border: 1px solid #ccc;
+            min-height: 80px;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+
+        .msg-form__contenteditable {
+            border: 1px solid #0073b1;
+            min-height: 60px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .t-14 {
+            font-size: 14px;
+        }
+
+        .t-black--light {
+            color: #333;
+        }
+
+        .t-normal {
+            font-weight: normal;
+        }
+
+        .flex-grow-1 {
+            flex-grow: 1;
+        }
+
+        .full-height {
+            height: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Fixly Extension Test Page</h1>
+    <p>This page contains various contenteditable elements to test the Fixly extension.</p>
+
+    <div class="container">
+        <h2>Standard Contenteditable</h2>
+        <div contenteditable="true" class="editor">
+            This is a standard contenteditable element. Type something with spelling errors here.
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>LinkedIn-Style Message Box</h2>
+        <div class="linkedin-style">
+            <div class="msg-form__contenteditable t-14 t-black--light t-normal flex-grow-1 full-height"
+                contenteditable="true" role="textbox">
+                This is a LinkedIn-style message box. It has multiple classes that match LinkedIn's structure.
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Empty Contenteditable (button should appear after typing)</h2>
+        <div contenteditable="true" class="editor"></div>
+    </div>
+
+    <div class="container">
+        <h2>Contenteditable with Different Attribute Format</h2>
+        <div contenteditable class="editor">
+            This contenteditable doesn't have ="true", just the attribute by itself.
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Role="textbox" Element</h2>
+        <div role="textbox" class="editor" tabindex="0">
+            This element uses role="textbox" instead of contenteditable.
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Regular Input Fields</h2>
+        <input type="text" placeholder="Regular text input" style="width: 100%; padding: 8px; margin-bottom: 10px;">
+        <textarea placeholder="Regular textarea" style="width: 100%; padding: 8px; height: 80px;"></textarea>
+    </div>
+
+    <script>
+        // Make the role="textbox" element editable
+        document.querySelector('[role="textbox"]').addEventListener('focus', function () {
+            this.contentEditable = true;
+        });
+    </script>
+</body>
+
+</html>

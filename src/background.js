@@ -1,7 +1,10 @@
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "fixText") {
+        console.log("Received fixText request:", request.text ? request.text.substring(0, 20) + "..." : "empty");
+
         // Don't process empty text
         if (!request.text || request.text.trim() === "") {
+            console.error("No text to fix");
             sendResponse({ error: "No text to fix" });
             return true;
         }
@@ -13,6 +16,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         chrome.storage.sync.get(['openai_model'], (result) => {
             // Use the selected model or default to gpt-4o-mini
             const model = result.openai_model || 'gpt-4o-mini';
+            console.log("Using model:", model);
 
             fetch("https://api.openai.com/v1/chat/completions", {
                 method: "POST",
@@ -38,12 +42,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 .then(response => {
                     if (!response.ok) {
                         return response.json().then(errorData => {
+                            console.error("API error:", errorData);
                             throw new Error(errorData.error?.message || "API request failed");
                         });
                     }
                     return response.json();
                 })
                 .then(data => {
+                    console.log("API response received");
                     if (data.choices && data.choices[0] && data.choices[0].message) {
                         let fixedText = data.choices[0].message.content.trim();
 
@@ -66,11 +72,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
                         if (containsErrorPhrase) {
                             // If response contains error phrases, return original text
+                            console.log("Response contained error phrase, returning original text");
                             sendResponse({ fixedText: originalText });
                         } else {
+                            console.log("Returning fixed text");
                             sendResponse({ fixedText: fixedText });
                         }
                     } else {
+                        console.error("Unexpected API response format:", data);
                         throw new Error("Unexpected API response format");
                     }
                 })
@@ -83,3 +92,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return true;
     }
 });
+
+// Log when the background script is loaded
+console.log("Fixly background script loaded");
