@@ -87,6 +87,10 @@ The extension works by:
 
 MIT License
 
+## Distribution
+
+For information about distributing this extension through GitHub Releases or the Chrome Web Store, please see [DISTRIBUTION.md](DISTRIBUTION.md).
+
 ## Support
 
 For issues, feature requests, or questions, please open an issue on the GitHub repository.

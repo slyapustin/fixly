@@ -1,0 +1,29 @@
+name: Build Release
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Get version from manifest
+        id: get_version
+        run: |
+          VERSION=$(grep -o '"version": "[^"]*"' src/manifest.json | cut -d'"' -f4)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create zip file
+        run: |
+          zip -r fixly-v${{ steps.get_version.outputs.version }}.zip src -x "*.DS_Store" "*.git*"
+
+      - name: Upload zip to release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: fixly-v${{ steps.get_version.outputs.version }}.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
