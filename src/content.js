@@ -2,11 +2,8 @@ function addFixButton(element) {
     // Check if button already exists for this element
     // Use hasAttribute to check if the attribute exists at all
     if (element.hasAttribute("data-fixly-button-added") || element.hasAttribute("data-fixly-direct-button")) {
-        console.log("Button already exists for element, skipping");
         return;
     }
-
-    console.log("Adding fix button to element:", element);
 
     let button = document.createElement("span");
     button.innerText = "✨";
@@ -122,7 +119,6 @@ function addFixButton(element) {
 
             // Force button to be visible for LinkedIn message composers
             button.style.display = "inline-flex";
-            console.log("Forcing button visibility for LinkedIn message composer");
 
             // Also ensure the button is positioned correctly
             const rect = element.getBoundingClientRect();
@@ -168,7 +164,6 @@ function addFixButton(element) {
         // Show button only if there's actual content
         if (content.length > 0) {
             button.style.display = "inline-flex";
-            console.log("Showing button for element with content:", content.substring(0, 20) + "...");
         } else {
             button.style.display = "none";
         }
@@ -430,8 +425,6 @@ function addFixButton(element) {
 
 // Add a specific fix for LinkedIn contenteditable elements
 function addLinkedInFixes() {
-    console.log("Applying LinkedIn-specific fixes");
-
     // LinkedIn message composer - use multiple selectors to ensure we catch it
     const messageComposerSelectors = [
         '.msg-form__contenteditable',
@@ -446,8 +439,6 @@ function addLinkedInFixes() {
 
     // Find all message composers
     document.querySelectorAll(composerSelector).forEach(element => {
-        console.log("Found LinkedIn message composer:", element);
-
         // Special handling for LinkedIn message composer
         if (!element.hasAttribute("data-fixly-button-added")) {
             // Add a mutation observer specifically for this element to detect placeholder changes
@@ -457,8 +448,6 @@ function addLinkedInFixes() {
                         (mutation.attributeName === 'aria-hidden' ||
                             mutation.attributeName === 'data-artdeco-is-focused')) {
                         // When these attributes change, it might indicate the editor state changed
-                        console.log("LinkedIn editor state changed, checking content");
-
                         // Force a content check on the element's fix button
                         const buttons = document.querySelectorAll('.fixly-button');
                         buttons.forEach(btn => {
@@ -493,7 +482,6 @@ function addLinkedInFixes() {
         while (parent && parent.tagName !== 'BODY') {
             if (parent.isContentEditable || parent.getAttribute("contenteditable") === "true") {
                 if (!parent.hasAttribute("data-fixly-button-added")) {
-                    console.log("Found LinkedIn message composer parent:", parent);
                     addFixButton(parent);
                 }
             }
@@ -503,7 +491,6 @@ function addLinkedInFixes() {
         // Also check child elements for contenteditable
         element.querySelectorAll('[contenteditable]').forEach(child => {
             if (!child.hasAttribute("data-fixly-button-added")) {
-                console.log("Found LinkedIn message composer child:", child);
                 addFixButton(child);
             }
         });
@@ -511,20 +498,17 @@ function addLinkedInFixes() {
 
     // LinkedIn post composer
     document.querySelectorAll('[role="textbox"][aria-label="Write a post"]').forEach(element => {
-        console.log("Found LinkedIn post composer:", element);
         addFixButton(element);
     });
 
     // LinkedIn comment fields
     document.querySelectorAll('[role="textbox"][aria-label*="comment"]').forEach(element => {
-        console.log("Found LinkedIn comment field:", element);
         addFixButton(element);
     });
 
     // LinkedIn has specific classes for their contenteditable elements
     document.querySelectorAll('.t-14.t-black--light.t-normal').forEach(element => {
         if (element.isContentEditable || element.getAttribute("contenteditable")) {
-            console.log("Found LinkedIn editor with t-14 classes:", element);
             addFixButton(element);
         }
     });
@@ -532,7 +516,6 @@ function addLinkedInFixes() {
     // Look for elements with data-placeholder attribute (LinkedIn uses these)
     document.querySelectorAll('[data-placeholder]').forEach(element => {
         if (element.isContentEditable || element.getAttribute("contenteditable")) {
-            console.log("Found element with data-placeholder:", element);
             addFixButton(element);
         }
     });
@@ -540,8 +523,6 @@ function addLinkedInFixes() {
 
 // Function to find and process all relevant elements
 function processElements() {
-    console.log("Processing elements for fix buttons");
-
     // Process regular inputs and textareas
     document.querySelectorAll("textarea, input[type='text']").forEach(addFixButton);
 
@@ -588,8 +569,6 @@ setTimeout(processElements, 1000);
 
 // For LinkedIn, we'll use either the direct button approach OR the standard approach, not both
 if (window.location.hostname.includes("linkedin.com")) {
-    console.log("LinkedIn detected, setting up LinkedIn-specific handling");
-
     // Set a flag to indicate we're using the direct button approach
     window.fixlyUsingDirectButtons = true;
 
@@ -640,14 +619,9 @@ setInterval(() => {
     }
 }, 2000);
 
-// Add debugging info to help troubleshoot
-console.log("Fixly extension loaded and running");
-
 // Function to directly add a fix button to LinkedIn's message composer
 // This is a more aggressive approach that bypasses the normal detection
 function addLinkedInMessageComposerButton() {
-    console.log("Attempting direct button addition to LinkedIn message composer");
-
     // First, clean up any existing direct buttons to prevent duplicates
     document.querySelectorAll('.fixly-direct-button').forEach(button => {
         // Check if the button's associated element still exists
@@ -675,8 +649,6 @@ function addLinkedInMessageComposerButton() {
     for (const selector of selectors) {
         const elements = document.querySelectorAll(selector);
         if (elements.length > 0) {
-            console.log(`Found ${elements.length} elements matching ${selector}`);
-
             elements.forEach(element => {
                 // Skip if already processed by either method
                 if (element.hasAttribute("data-fixly-direct-button") || element.hasAttribute("data-fixly-button-added")) {
@@ -820,8 +792,6 @@ function addLinkedInMessageComposerButton() {
 
 // Function to clean up orphaned buttons
 function cleanupOrphanedButtons() {
-    console.log("Cleaning up orphaned buttons");
-
     // Clean up fixly-button elements
     document.querySelectorAll('.fixly-button').forEach(button => {
         // Check if the button is still visible and has an associated element
@@ -831,7 +801,6 @@ function cleanupOrphanedButtons() {
         if (rect.width === 0 || rect.height === 0 ||
             rect.left < 0 || rect.top < 0 ||
             rect.right > window.innerWidth || rect.bottom > window.innerHeight) {
-            console.log("Removing off-screen or zero-size button");
             button.remove();
             return;
         }
@@ -844,7 +813,6 @@ function cleanupOrphanedButtons() {
         );
 
         if (!hasAssociatedElement) {
-            console.log("Removing orphaned button with no associated element");
             button.remove();
         }
     });
@@ -858,7 +826,6 @@ function cleanupOrphanedButtons() {
         if (rect.width === 0 || rect.height === 0 ||
             rect.left < 0 || rect.top < 0 ||
             rect.right > window.innerWidth || rect.bottom > window.innerHeight) {
-            console.log("Removing off-screen or zero-size direct button");
             button.remove();
             return;
         }
@@ -871,7 +838,6 @@ function cleanupOrphanedButtons() {
         );
 
         if (!hasAssociatedElement) {
-            console.log("Removing orphaned direct button with no associated element");
             button.remove();
         }
     });
