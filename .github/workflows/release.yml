@@ -4,6 +4,10 @@ on:
   release:
     types: [created]
 
+# Add permissions block to grant necessary access
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
