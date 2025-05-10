@@ -5,7 +5,8 @@
     "description": "Fix your text in input fields using OpenAI API.",
     "permissions": [
         "storage",
-        "activeTab"
+        "activeTab",
+        "tabs"
     ],
     "host_permissions": [
         "https://api.openai.com/*"

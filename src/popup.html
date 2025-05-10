@@ -129,6 +129,12 @@
 <body>
     <h2>Fixly Settings</h2>
 
+    <div id="currentSiteAction" style="margin-bottom: 15px; display: none;">
+        <button id="toggleCurrentSite" class="small-button" style="width: 100%; padding: 8px 0;">
+            Disable Fixly on this website
+        </button>
+    </div>
+
     <div class="form-group">
         <label for="apiKeyInput">OpenAI API Key:</label>
         <input type="text" id="apiKeyInput" placeholder="sk-..." />
@@ -154,6 +160,20 @@
         </div>
         <div class="model-info">
             Edit the system prompt to customize how the AI processes your text. The default prompt is pre-filled.
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label for="disableSiteInput">Disable Fixly on Website:</label>
+        <div style="display: flex; gap: 5px;">
+            <input type="text" id="disableSiteInput" placeholder="example.com" style="flex-grow: 1;" />
+            <button id="addDisabledSite" class="small-button">Add</button>
+        </div>
+        <div class="model-info">
+            Enter domain names without "http://" or "www." (e.g., "twitter.com")
+        </div>
+        <div id="disabledSitesList" style="margin-top: 10px; max-height: 100px; overflow-y: auto;">
+            <!-- Disabled sites will be listed here -->
         </div>
     </div>
 
