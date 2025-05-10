@@ -1,19 +1,60 @@
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "fixText") {
-        console.log("Received fixText request:", request.text ? request.text.substring(0, 20) + "..." : "empty");
+        // Enhanced logging
+        console.log("Request received:", JSON.stringify({
+            action: request.action,
+            hasText: !!request.text,
+            textLength: request.text ? request.text.length : 0
+        }));
+        
+        try {
+            console.log("Received fixText request:", request.text ? request.text.substring(0, 20) + "..." : "empty");
+        } catch (e) {
+            console.error("Error logging text preview:", e);
+        }
 
-        // Don't process empty text
-        if (!request.text || request.text.trim() === "") {
-            console.error("No text to fix");
-            sendResponse({ error: "No text to fix" });
+        // Don't process empty text - but provide more detailed error
+        if (!request.text) {
+            console.error("Text is null or undefined");
+            sendResponse({ error: "No text was received" });
+            return true;
+        }
+        
+        // Try to convert text to string if it's not already
+        let textToProcess;
+        try {
+            textToProcess = request.text.toString().trim();
+        } catch (e) {
+            console.error("Could not convert text to string:", e);
+            sendResponse({ error: "Invalid text format" });
+            return true;
+        }
+        
+        if (textToProcess === "") {
+            console.error("Text is empty (blank)");
+            sendResponse({ error: "Text is empty" });
             return true;
         }
 
         // Store original text for comparison
-        const originalText = request.text.trim();
+        const originalText = textToProcess;
+        
+        // Special logging for W3Schools
+        const isW3Schools = sender.tab && sender.tab.url && sender.tab.url.includes('w3schools.com');
+        if (isW3Schools) {
+            console.log("W3Schools detected - Text length:", originalText.length);
+            console.log("W3Schools text sample:", originalText.substring(0, 50));
+        }
 
         // Get the model and system prompt from storage or use defaults
-        chrome.storage.sync.get(['openai_model', 'system_prompt'], (result) => {
+        chrome.storage.sync.get(['openai_api_key', 'openai_model', 'system_prompt'], (result) => {
+            // Check API key again
+            if (!request.apiKey) {
+                console.error("API key missing");
+                sendResponse({ error: "API key not provided" });
+                return;
+            }
+            
             // Use the selected model or default to gpt-4o-mini
             const model = result.openai_model || 'gpt-4o-mini';
             console.log("Using model:", model);
@@ -59,6 +100,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     console.log("API response received");
                     if (data.choices && data.choices[0] && data.choices[0].message) {
                         let fixedText = data.choices[0].message.content.trim();
+                        console.log("Fixed text length:", fixedText.length);
+                        console.log("Fixed text (first 50 chars):", fixedText.substring(0, 50));
 
                         // Check if the response contains error-like messages and use original text instead
                         const errorPhrases = [

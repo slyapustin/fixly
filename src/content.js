@@ -16,11 +16,267 @@ chrome.storage.sync.get(['disabled_sites'], function(result) {
     }
     
     // Continue with the rest of the extension logic
-    initializeFixly();
+    // Load dependencies directly in content script
+    loadDependencies();
 });
+
+// Load dependencies directly
+function loadDependencies() {
+    // Site adapters
+    // W3Schools adapter
+    window.fixlyAdapter_w3schools = {
+      domains: ['w3schools.com'],
+      processElements: function(addFixButton) {
+        // Only run on tryit pages
+        if (!window.location.href.includes('tryit.asp')) return;
+        
+        // Special handling for W3Schools CodeMirror editor
+        // First, find the result frame which contains the editor iframe
+        const resultFrame = document.getElementById('iframeResult');
+        if (!resultFrame) {
+          // If we're inside the result frame already, look for textareas
+          const textareas = document.querySelectorAll('textarea');
+          textareas.forEach(el => {
+            // Force the button to be visible since W3Schools textareas might not trigger normal detection
+            addFixButton(el);
+            if (el._fixlyButton) {
+              el._fixlyButton.style.display = 'inline-flex';
+            }
+          });
+          return;
+        }
+        
+        // If we found the result frame, it means we're in the parent page
+        // We need to find the editor element (usually a textarea with CodeMirror)
+        const editorElement = document.querySelector('.CodeMirror textarea') || 
+                              document.querySelector('#textareaCode') ||
+                              document.querySelector('textarea');
+        
+        if (editorElement) {
+          addFixButton(editorElement);
+          if (editorElement._fixlyButton) {
+            // Force the button to be visible and positioned properly
+            editorElement._fixlyButton.style.display = 'inline-flex';
+            editorElement._fixlyButton.style.position = 'absolute';
+            editorElement._fixlyButton.style.zIndex = '999999';
+            
+            // Position at the top right of the editor
+            const editorRect = editorElement.getBoundingClientRect();
+            editorElement._fixlyButton.style.top = `${editorRect.top + window.scrollY + 10}px`;
+            editorElement._fixlyButton.style.left = `${editorRect.right + window.scrollX - 40}px`;
+          }
+        }
+      },
+      
+      // Custom button styling for W3Schools
+      styleButton: function(button, element, rect) {
+        button.style.position = "absolute";
+        button.style.top = `${rect.top + window.scrollY + 5}px`;
+        button.style.left = `${rect.right + window.scrollX - 35}px`;
+        button.style.zIndex = "999999"; // Higher z-index to ensure visibility
+        button.style.display = "inline-flex"; // Force display
+        
+        // Make the button more visible
+        button.style.backgroundColor = "rgba(255, 255, 255, 0.9)";
+        button.style.boxShadow = "0 2px 5px rgba(0,0,0,0.4)"; // Stronger shadow
+      },
+      
+      // Special text extraction method for W3Schools
+      getElementText: function(element) {
+        // For W3Schools, check if we're inside an iframe or dealing with CodeMirror
+        if (element.classList.contains('CodeMirror-line') || element.closest('.CodeMirror')) {
+          // For CodeMirror, we need to get the editor instance and get text from there
+          const cmEditor = element.closest('.CodeMirror');
+          if (cmEditor && cmEditor.CodeMirror) {
+            return cmEditor.CodeMirror.getValue();
+          }
+        }
+        
+        // For textareas in W3Schools, ensure we get the actual value
+        if (element.tagName === 'TEXTAREA') {
+          return element.value || element.textContent || '';
+        }
+        
+        // Default to standard text extraction
+        return element.value || element.innerText || element.textContent || '';
+      },
+      
+      // Custom text application for W3Schools
+      applyFixedText: function(element, fixedText) {
+        // For CodeMirror elements
+        if (element.classList.contains('CodeMirror-line') || element.closest('.CodeMirror')) {
+          const cmEditor = element.closest('.CodeMirror');
+          if (cmEditor && cmEditor.CodeMirror) {
+            cmEditor.CodeMirror.setValue(fixedText);
+            return;
+          }
+        }
+        
+        // For standard textareas and inputs
+        if (element.tagName === 'TEXTAREA' || element.tagName === 'INPUT') {
+          element.value = fixedText;
+          
+          // Trigger change events
+          element.dispatchEvent(new Event('input', { bubbles: true }));
+          element.dispatchEvent(new Event('change', { bubbles: true }));
+          return;
+        }
+        
+        // For contenteditable elements
+        if (element.isContentEditable || element.getAttribute("contenteditable") === "true") {
+          element.innerText = fixedText;
+          
+          // Trigger input event to handle dynamic updates
+          element.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      }
+    };
+
+    // Define utilities
+    window.fixlyUtils = {
+      getNormalizedDomain: function() {
+        let domain = window.location.hostname;
+        if (domain.startsWith('www.')) {
+          domain = domain.substring(4);
+        }
+        return domain;
+      },
+      
+      isDisabledForCurrentSite: function(disabledSites) {
+        const currentDomain = window.fixlyUtils.getNormalizedDomain();
+        return disabledSites.includes(currentDomain);
+      },
+      
+      applyFixedText: function(element, fixedText) {
+        if (element.isContentEditable || element.getAttribute("contenteditable") === "true") {
+          // For contenteditable elements
+          element.focus();
+          if (document.createRange && window.getSelection) {
+            // Modern browsers
+            const range = document.createRange();
+            range.selectNodeContents(element);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+
+            // Delete the current content
+            document.execCommand('delete', false, null);
+
+            // Insert the new content
+            document.execCommand('insertText', false, fixedText);
+          } else {
+            // Fallback for older browsers
+            element.innerText = fixedText;
+          }
+
+          // Dispatch input event to trigger any listeners
+          const inputEvent = new Event('input', { bubbles: true });
+          element.dispatchEvent(inputEvent);
+        } else {
+          // For regular inputs and textareas
+          element.value = fixedText;
+
+          // Trigger input event
+          const inputEvent = new Event('input', { bubbles: true });
+          element.dispatchEvent(inputEvent);
+        }
+      },
+      
+      getElementText: function(element) {
+        // First check if we're on w3schools.com
+        if (window.location.hostname.includes('w3schools.com')) {
+          const w3SchoolsAdapter = window.fixlyAdapter_w3schools;
+          if (w3SchoolsAdapter && typeof w3SchoolsAdapter.getElementText === 'function') {
+            return w3SchoolsAdapter.getElementText(element);
+          }
+        }
+        
+        // Then check if element is inside an iframe
+        if (window.frameElement) {
+          console.log('Element is inside an iframe');
+        }
+        
+        // For textareas and inputs, use value
+        if (element.tagName === 'TEXTAREA' || element.tagName === 'INPUT') {
+          return element.value || '';
+        }
+        
+        // For contenteditable elements
+        if (element.isContentEditable || element.getAttribute("contenteditable") === "true") {
+          return element.innerText || element.textContent || '';
+        }
+        
+        // Fallback to standard value/innerText/textContent
+        return element.value || element.innerText || element.textContent || '';
+      },
+      
+      cleanupOrphanedButtons: function() {
+        const buttonClasses = ['.fixly-button', '.fixly-direct-button'];
+        
+        buttonClasses.forEach(buttonClass => {
+          document.querySelectorAll(buttonClass).forEach(button => {
+            // Check if button is visible and has associated element
+            const rect = button.getBoundingClientRect();
+            
+            // If button is not visible, remove it
+            if (rect.width === 0 || rect.height === 0 ||
+                rect.left < 0 || rect.top < 0 ||
+                rect.right > window.innerWidth || rect.bottom > window.innerHeight) {
+              button.remove();
+              return;
+            }
+            
+            // Check if there's an element with our data attribute near the button
+            const elementsAtPoint = document.elementsFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+            const hasAssociatedElement = elementsAtPoint.some(el =>
+              el.hasAttribute("data-fixly-button-added") ||
+              el.hasAttribute("data-fixly-direct-button")
+            );
+            
+            if (!hasAssociatedElement) {
+              button.remove();
+            }
+          });
+        });
+      }
+    };
+    
+    // Define adapter registry
+    window.fixlyAdapters = {
+      // Registry of all site adapters
+      adapters: [window.fixlyAdapter_w3schools],
+      
+      getAdapterForSite: function(domain) {
+        return this.adapters.find(adapter => 
+          adapter && adapter.domains && adapter.domains.some(adapterDomain => domain.includes(adapterDomain))
+        ) || null;
+      },
+      
+      registerSiteAdapter: function(adapter) {
+        if (!adapter || !adapter.domains || !Array.isArray(adapter.domains)) {
+          console.error('Invalid site adapter format');
+          return;
+        }
+        
+        this.adapters.push(adapter);
+      },
+      
+      hasSiteAdapter: function(domain) {
+        return this.adapters.some(adapter => 
+          adapter && adapter.domains && adapter.domains.some(adapterDomain => domain.includes(adapterDomain))
+        );
+      }
+    };
+    
+    // Initialize Fixly after all dependencies are set up
+    initializeFixly();
+}
 
 // Wrap all the existing functionality in a function to call it conditionally
 function initializeFixly() {
+    // Don't assign methods to variables - this loses the 'this' context
+    // Instead use them directly from the global objects
+    
     function addFixButton(element) {
         // Check if button already exists for this element
         // Use hasAttribute to check if the attribute exists at all
@@ -36,7 +292,6 @@ function initializeFixly() {
         button.style.margin = "5px";
         button.style.fontSize = "20px";
         button.style.fontFamily = "Arial, sans-serif";
-        button.style.display = "none"; // Initially hidden
         button.style.userSelect = "none";
         button.style.backgroundColor = "rgba(255, 255, 255, 0.9)"; // Add background
         button.style.borderRadius = "50%"; // Make it circular
@@ -50,6 +305,7 @@ function initializeFixly() {
         button.style.justifyContent = "center"; // Center horizontally with flexbox
         button.title = "Fix text with AI";
         button.className = "fixly-button";
+        button.setAttribute("data-fixly-persistent", "true"); // Mark as persistent to prevent cleanup
 
         // Add hover effect
         button.onmouseover = () => {
@@ -67,177 +323,126 @@ function initializeFixly() {
         element.setAttribute("data-fixly-button-added", "true");
 
         // Get normalized domain without www. prefix
-        let domain = window.location.hostname;
-        if (domain.startsWith('www.')) {
-            domain = domain.substring(4);
-        }
+        let domain = window.fixlyUtils.getNormalizedDomain();
 
-        // Special handling for otodom.pl
-        if (domain.includes("otodom.pl")) {
-            // For otodom.pl, use a more aggressive approach to ensure the button is visible
-            button.style.position = "absolute";
+        // Get site adapter if one exists for this domain
+        const siteAdapter = window.fixlyAdapters.getAdapterForSite(domain);
+        
+        // Different positioning strategies based on element type and site adapter
+        if (siteAdapter) {
+            // Use site adapter's styling
             const rect = element.getBoundingClientRect();
-            button.style.top = `${rect.top + window.scrollY + 10}px`;
-            button.style.left = `${rect.right + window.scrollX - 40}px`;
-            button.style.display = "inline-flex"; // Force display
-            button.style.backgroundColor = "#fff"; // Solid background for better visibility
-            button.style.zIndex = "999999"; // Higher z-index
-            document.body.appendChild(button);
+            siteAdapter.styleButton(button, element, rect);
             
-            // Update position when window is scrolled or resized
-            const updatePosition = () => {
-                if (!document.body.contains(element)) return;
+            // If button was positioned absolutely, add to body
+            if (button.style.position === "absolute") {
+                document.body.appendChild(button);
                 
-                const updatedRect = element.getBoundingClientRect();
-                button.style.top = `${updatedRect.top + window.scrollY + 10}px`;
-                button.style.left = `${updatedRect.right + window.scrollX - 40}px`;
-            };
-            
-            window.addEventListener("scroll", updatePosition);
-            window.addEventListener("resize", updatePosition);
-            
-            // Also update position periodically to handle dynamic changes
-            const positionInterval = setInterval(updatePosition, 500);
-            
-            // Clean up when element is removed
-            const cleanupEvents = () => {
-                window.removeEventListener("scroll", updatePosition);
-                window.removeEventListener("resize", updatePosition);
-                clearInterval(positionInterval);
-            };
-            
-            // Store cleanup function on the element
-            element._fixlyCleanup = cleanupEvents;
-            
-            return; // Exit early - we've used a special approach for otodom.pl
-        }
-
-        // Different placement strategy based on element type
-        if (element.isContentEditable || element.getAttribute("contenteditable") === "true") {
-            // For contenteditable elements, position the button absolutely relative to the element
-            button.style.position = "absolute";
-
-            // Position the button in the top-right corner of the element
-            const rect = element.getBoundingClientRect();
-
-            // For LinkedIn specifically, adjust the position
-            if (domain.includes("linkedin.com")) {
-                // Position inside the element for better visibility
-                button.style.top = `${rect.top + window.scrollY + 10}px`;
-                button.style.left = `${rect.right + window.scrollX - 40}px`;
-
-                // Make it more visible on LinkedIn
-                button.style.fontSize = "22px";
-                button.style.padding = "5px 10px";
+                // Update position when window is scrolled or resized
+                const updatePosition = () => {
+                    if (!document.body.contains(element)) return;
+                    
+                    const updatedRect = element.getBoundingClientRect();
+                    siteAdapter.styleButton(button, element, updatedRect);
+                };
+                
+                window.addEventListener("scroll", updatePosition);
+                window.addEventListener("resize", updatePosition);
+                
+                // Also update position periodically to handle dynamic changes
+                const positionInterval = setInterval(updatePosition, 500);
+                
+                // Clean up when element is removed
+                const cleanupEvents = () => {
+                    window.removeEventListener("scroll", updatePosition);
+                    window.removeEventListener("resize", updatePosition);
+                    clearInterval(positionInterval);
+                };
+                
+                // Store cleanup function on the element
+                element._fixlyCleanup = cleanupEvents;
             } else {
-                button.style.top = `${rect.top + window.scrollY + 5}px`;
-                button.style.left = `${rect.right + window.scrollX - 30}px`;
-            }
-
-            document.body.appendChild(button);
-
-            // Update position when window is scrolled or resized
-            const updatePosition = () => {
-                if (!document.body.contains(element)) return;
-
-                const updatedRect = element.getBoundingClientRect();
-
-                // For LinkedIn specifically, adjust the position
-                if (domain.includes("linkedin.com")) {
-                    button.style.top = `${updatedRect.top + window.scrollY + 10}px`;
-                    button.style.left = `${updatedRect.right + window.scrollX - 40}px`;
+                // For non-absolute positioned buttons, place them adjacent to the element
+                if (element.nextSibling) {
+                    element.parentNode.insertBefore(button, element.nextSibling);
                 } else {
-                    button.style.top = `${updatedRect.top + window.scrollY + 5}px`;
-                    button.style.left = `${updatedRect.right + window.scrollX - 30}px`;
+                    element.parentNode.appendChild(button);
                 }
-            };
-
-            window.addEventListener("scroll", updatePosition);
-            window.addEventListener("resize", updatePosition);
-
-            // Also update position periodically to handle dynamic changes
-            const positionInterval = setInterval(updatePosition, 500);
-
-            // Clean up when element is removed
-            const cleanupEvents = () => {
-                window.removeEventListener("scroll", updatePosition);
-                window.removeEventListener("resize", updatePosition);
-                clearInterval(positionInterval);
-            };
-
-            // Store cleanup function on the element
-            element._fixlyCleanup = cleanupEvents;
+            }
         } else {
-            // For regular inputs and textareas, position after the element
-            button.style.verticalAlign = "middle";
-            if (element.nextSibling) {
-                element.parentNode.insertBefore(button, element.nextSibling);
+            // If no site adapter, use element type to determine positioning
+            if (element.tagName === 'TEXTAREA' || element.tagName === 'INPUT') {
+                // For regular inputs and textareas: place button adjacent (not absolute)
+                button.style.position = "static";
+                button.style.verticalAlign = "middle";
+                button.style.marginLeft = "5px";
+                
+                // Insert after the element
+                if (element.nextSibling) {
+                    element.parentNode.insertBefore(button, element.nextSibling);
+                } else {
+                    element.parentNode.appendChild(button);
+                }
+                
+                // Force button to be visible 
+                button.style.display = "inline-flex";
+            } else if (element.isContentEditable || element.getAttribute("contenteditable") === "true") {
+                // For contenteditable elements, position absolutely
+                button.style.position = "absolute";
+                button.style.zIndex = "999999"; // Higher z-index
+
+                // Position in the top-right corner of the element
+                const rect = element.getBoundingClientRect();
+                button.style.top = `${rect.top + window.scrollY + 5}px`;
+                button.style.left = `${rect.right + window.scrollX - 35}px`;
+                
+                // Add to document body
+                document.body.appendChild(button);
+
+                // Update position when needed
+                const updatePosition = () => {
+                    if (!document.body.contains(element)) return;
+
+                    const updatedRect = element.getBoundingClientRect();
+                    button.style.top = `${updatedRect.top + window.scrollY + 5}px`;
+                    button.style.left = `${updatedRect.right + window.scrollX - 35}px`;
+                };
+
+                window.addEventListener("scroll", updatePosition);
+                window.addEventListener("resize", updatePosition);
+
+                // Update periodically to handle dynamic changes
+                const positionInterval = setInterval(updatePosition, 500);
+
+                // Clean up when element is removed
+                const cleanupEvents = () => {
+                    window.removeEventListener("scroll", updatePosition);
+                    window.removeEventListener("resize", updatePosition);
+                    clearInterval(positionInterval);
+                };
+
+                // Store cleanup function
+                element._fixlyCleanup = cleanupEvents;
             } else {
-                element.parentNode.appendChild(button);
+                // For any other element type, default to adjacent positioning
+                button.style.verticalAlign = "middle";
+                if (element.nextSibling) {
+                    element.parentNode.insertBefore(button, element.nextSibling);
+                } else {
+                    element.parentNode.appendChild(button);
+                }
             }
         }
 
         // Function to check content and show/hide button
         const checkContent = () => {
-            let content = "";
+            let content = window.fixlyUtils.getElementText(element).trim();
 
-            // Get normalized domain without www. prefix
-            let domain = window.location.hostname;
-            if (domain.startsWith('www.')) {
-                domain = domain.substring(4);
-            }
-
-            // For LinkedIn, always show the button on message composers
-            if (domain.includes("linkedin.com") &&
-                (element.classList.contains("msg-form__contenteditable") ||
-                    element.closest(".msg-form__contenteditable") ||
-                    element.classList.contains("t-14") &&
-                    element.classList.contains("t-black--light") &&
-                    element.classList.contains("t-normal"))) {
-
-                // Force button to be visible for LinkedIn message composers
+            // For W3Schools and textareas, always show button regardless of content
+            if (domain.includes('w3schools') || element.tagName === 'TEXTAREA') {
                 button.style.display = "inline-flex";
-
-                // Also ensure the button is positioned correctly
-                const rect = element.getBoundingClientRect();
-                button.style.top = `${rect.top + window.scrollY + 10}px`;
-                button.style.left = `${rect.right + window.scrollX - 40}px`;
-
                 return;
             }
-
-            // Normal content checking for other elements
-            if (element.isContentEditable || element.getAttribute("contenteditable") === "true") {
-                content = element.innerText || element.textContent;
-
-                // Special handling for LinkedIn message composer
-                if (domain.includes("linkedin.com") &&
-                    (element.classList.contains("msg-form__contenteditable") ||
-                        element.closest(".msg-form__contenteditable"))) {
-
-                    // Check if the element has a placeholder sibling
-                    const placeholder = element.querySelector('[data-placeholder]') ||
-                        element.parentElement.querySelector('[data-placeholder]');
-
-                    if (placeholder) {
-                        // If placeholder is visible, the field is likely empty
-                        const isPlaceholderVisible = window.getComputedStyle(placeholder).display !== 'none';
-                        if (isPlaceholderVisible) {
-                            content = ""; // Consider it empty if placeholder is visible
-                        }
-                    }
-
-                    // Also check aria-hidden attribute which LinkedIn uses to toggle placeholder visibility
-                    if (element.getAttribute('aria-hidden') === 'true') {
-                        content = ""; // Consider it empty if aria-hidden is true
-                    }
-                }
-            } else {
-                content = element.value;
-            }
-
-            // Trim the content to ignore whitespace
-            content = content.trim();
 
             // Show button only if there's actual content
             if (content.length > 0) {
@@ -255,10 +460,15 @@ function initializeFixly() {
         element.addEventListener("change", checkContent);
         element.addEventListener("keyup", checkContent);
 
-        // Force check content after a short delay to handle dynamic content
+        // Force check content after delays to handle dynamic content
         setTimeout(checkContent, 500);
+        setTimeout(checkContent, 1000);
+        setTimeout(checkContent, 2000);
 
+        // Add click handler with debugging
         button.addEventListener("click", () => {
+            console.log('Fixly button clicked!');
+            
             // Show loading state
             const originalText = button.innerText;
             button.innerText = "⏳";
@@ -266,13 +476,67 @@ function initializeFixly() {
             button.onmouseover = null;
             button.onmouseout = null;
 
-            // Get text content based on element type
+            // Get text content from element based on specific element type
             let textContent = "";
-            if (element.isContentEditable || element.getAttribute("contenteditable") === "true") {
-                textContent = element.innerText || element.textContent;
+            
+            // Special handling for W3Schools
+            if (domain.includes('w3schools.com')) {
+                console.log('W3Schools site detected, using special text extraction');
+                
+                // For textareas in W3Schools
+                if (element.tagName === 'TEXTAREA') {
+                    textContent = element.value || '';
+                    console.log('Using direct textarea value:', textContent.substring(0, 30));
+                }
+                
+                // If we're in an iframe editor
+                if (window.location.href.includes('tryit.asp')) {
+                    // Try to get direct value first
+                    if (!textContent && element.value) {
+                        textContent = element.value;
+                        console.log('Using iframe element value:', textContent.substring(0, 30));
+                    }
+                    
+                    // If still empty, try other methods
+                    if (!textContent) {
+                        // Try innerText/textContent
+                        textContent = element.innerText || element.textContent || '';
+                        console.log('Using innerText/textContent:', textContent.substring(0, 30));
+                    }
+                }
+                
+                // If still empty, look for CodeMirror
+                if (!textContent && window.CodeMirror) {
+                    // For CodeMirror editors
+                    const cmElement = element.closest('.CodeMirror');
+                    if (cmElement && cmElement.CodeMirror) {
+                        textContent = cmElement.CodeMirror.getValue() || '';
+                        console.log('Using CodeMirror value:', textContent.substring(0, 30));
+                    }
+                }
+                
+                // Final fallback for W3Schools - check the page for any visible textarea
+                if (!textContent) {
+                    const allTextareas = document.querySelectorAll('textarea');
+                    if (allTextareas.length > 0) {
+                        textContent = allTextareas[0].value || '';
+                        console.log('Using fallback first textarea value:', textContent.substring(0, 30));
+                    }
+                }
             } else {
-                textContent = element.value;
+                // Standard extraction for non-W3Schools sites
+                textContent = window.fixlyUtils.getElementText(element);
             }
+            
+            // Ensure we have text content
+            if (!textContent) {
+                console.error('Failed to extract text content');
+                alert("Error: Could not extract text from the element");
+                resetButtonState();
+                return;
+            }
+            
+            console.log('Text content to fix:', textContent.substring(0, 50) + (textContent.length > 50 ? '...' : ''));
 
             // Store original text for undo functionality
             element._fixlyOriginalText = textContent;
@@ -281,173 +545,40 @@ function initializeFixly() {
             chrome.storage.sync.get(['openai_api_key'], (result) => {
                 if (!result.openai_api_key) {
                     alert("Please set your OpenAI API key in the Fixly extension settings.");
+                    console.log('No API key found');
                     button.innerText = originalText;
                     resetButtonState();
                     return;
                 }
 
+                console.log('Sending fix request to background script, text length:', textContent.length);
                 chrome.runtime.sendMessage({
                     action: "fixText",
                     text: textContent,
                     apiKey: result.openai_api_key
                 }, response => {
-                    if (response.fixedText) {
-                        // Set text content based on element type
-                        if (element.isContentEditable || element.getAttribute("contenteditable") === "true") {
-                            // For LinkedIn and other complex editors, use a more careful approach
-                            // First, focus the element to ensure it's active
-                            element.focus();
-
-                            // Store the original text for undo functionality
-                            if (!element._fixlyOriginalText) {
-                                element._fixlyOriginalText = element.innerText || element.textContent;
-                            }
-
-                            // Clear the current content
-                            // Use selection and execCommand for better compatibility with rich text editors
-                            if (document.createRange && window.getSelection) {
-                                // Modern browsers
-                                const range = document.createRange();
-                                range.selectNodeContents(element);
-                                const selection = window.getSelection();
-                                selection.removeAllRanges();
-                                selection.addRange(range);
-
-                                // Delete the current content
-                                document.execCommand('delete', false, null);
-
-                                // Insert the new content
-                                document.execCommand('insertText', false, response.fixedText);
-                            } else {
-                                // Fallback for older browsers
-                                element.innerText = response.fixedText;
-                            }
-
-                            // Dispatch input event to trigger any listeners
-                            const inputEvent = new Event('input', { bubbles: true });
-                            element.dispatchEvent(inputEvent);
-
-                            // For LinkedIn specifically
-                            if (window.location.hostname.includes("linkedin.com")) {
-                                // Trigger a keypress event to ensure LinkedIn's editor updates properly
-                                const keypressEvent = new KeyboardEvent('keypress', {
-                                    bubbles: true,
-                                    cancelable: true,
-                                    key: ' ',
-                                    keyCode: 32
-                                });
-                                element.dispatchEvent(keypressEvent);
-
-                                // Also trigger a change event
-                                const changeEvent = new Event('change', { bubbles: true });
-                                element.dispatchEvent(changeEvent);
-
-                                // Special handling for LinkedIn message composer
-                                if (element.classList.contains("msg-form__contenteditable") ||
-                                    element.closest(".msg-form__contenteditable")) {
-
-                                    // Find any placeholder elements and hide them
-                                    const placeholder = element.querySelector('[data-placeholder]') ||
-                                        element.parentElement.querySelector('[data-placeholder]');
-                                    if (placeholder) {
-                                        placeholder.style.display = 'none';
-                                    }
-
-                                    // Set aria-hidden to false to indicate content is present
-                                    element.setAttribute('aria-hidden', 'false');
-
-                                    // Set data-artdeco-is-focused to true
-                                    if (element.hasAttribute('data-artdeco-is-focused')) {
-                                        element.setAttribute('data-artdeco-is-focused', 'true');
-                                    }
-
-                                    // Focus the element again to ensure it's active
-                                    setTimeout(() => {
-                                        element.focus();
-
-                                        // Move cursor to end
-                                        if (document.createRange && window.getSelection) {
-                                            const range = document.createRange();
-                                            range.selectNodeContents(element);
-                                            range.collapse(false); // false means collapse to end
-                                            const selection = window.getSelection();
-                                            selection.removeAllRanges();
-                                            selection.addRange(range);
-                                        }
-                                    }, 50);
-                                }
-                            }
-
-                            // Add undo event listener if not already added
-                            if (!element._fixlyUndoListenerAdded) {
-                                element._fixlyUndoListenerAdded = true;
-
-                                // Create the handler function and store it for later removal
-                                element._fixlyUndoHandler = function (e) {
-                                    // Check for Ctrl+Z or Cmd+Z (Mac)
-                                    if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
-                                        // If we have stored original text, restore it
-                                        if (element._fixlyOriginalText) {
-                                            e.preventDefault(); // Prevent default undo behavior
-
-                                            if (element.isContentEditable || element.getAttribute("contenteditable") === "true") {
-                                                // For contenteditable elements
-                                                // Use selection and execCommand for better compatibility
-                                                if (document.createRange && window.getSelection) {
-                                                    // Modern browsers
-                                                    const range = document.createRange();
-                                                    range.selectNodeContents(element);
-                                                    const selection = window.getSelection();
-                                                    selection.removeAllRanges();
-                                                    selection.addRange(range);
-
-                                                    // Delete the current content
-                                                    document.execCommand('delete', false, null);
-
-                                                    // Insert the original content
-                                                    document.execCommand('insertText', false, element._fixlyOriginalText);
-                                                } else {
-                                                    // Fallback for older browsers
-                                                    element.innerText = element._fixlyOriginalText;
-                                                }
-
-                                                // Dispatch input event to trigger any listeners
-                                                const inputEvent = new Event('input', { bubbles: true });
-                                                element.dispatchEvent(inputEvent);
-                                            } else {
-                                                // For regular inputs and textareas
-                                                element.value = element._fixlyOriginalText;
-
-                                                // Trigger input event
-                                                const inputEvent = new Event('input', { bubbles: true });
-                                                element.dispatchEvent(inputEvent);
-                                            }
-
-                                            // Clear the stored original text after using it once
-                                            element._fixlyOriginalText = null;
-
-                                            // Check content after undoing
-                                            checkContent();
-                                        }
-                                    }
-                                };
-
-                                element.addEventListener('keydown', element._fixlyUndoHandler);
-                            }
+                    console.log('Received response:', response ? 'success' : 'error');
+                    
+                    if (response && response.fixedText) {
+                        // Check if we have a site adapter that can handle text application
+                        const domain = window.fixlyUtils.getNormalizedDomain();
+                        const siteAdapter = window.fixlyAdapters.getAdapterForSite(domain);
+                        
+                        if (siteAdapter && typeof siteAdapter.applyFixedText === 'function') {
+                            // Use site-specific text handling
+                            console.log('Using site adapter to apply fixed text');
+                            siteAdapter.applyFixedText(element, response.fixedText);
                         } else {
-                            // Store the original text for undo functionality
-                            if (!element._fixlyOriginalText) {
-                                element._fixlyOriginalText = element.value;
-                            }
-
-                            element.value = response.fixedText;
-
-                            // Trigger input event for regular inputs
-                            const inputEvent = new Event('input', { bubbles: true });
-                            element.dispatchEvent(inputEvent);
+                            // Use default text handling
+                            console.log('Using default method to apply fixed text');
+                            window.fixlyUtils.applyFixedText(element, response.fixedText);
                         }
+                        
+                        // Add undo functionality
+                        addUndoFunctionality(element);
                     } else {
-                        alert("Error: " + (response.error || "Unknown error occurred"));
+                        alert("Error: " + (response && response.error ? response.error : "Unknown error occurred"));
+                        console.log('Error fixing text:', response ? response.error : 'Unknown error');
                     }
                     // Reset button state
                     resetButtonState();
@@ -501,102 +632,31 @@ function initializeFixly() {
         observer.observe(document.body, { childList: true, subtree: true });
     }
 
-    // Add a specific fix for LinkedIn contenteditable elements
-    function addLinkedInFixes() {
-        // LinkedIn message composer - use multiple selectors to ensure we catch it
-        const messageComposerSelectors = [
-            '.msg-form__contenteditable',
-            '[role="textbox"][data-placeholder="Write a message…"]',
-            '[role="textbox"][data-artdeco-is-focused]',
-            '.msg-form__message-texteditor',
-            '.msg-form__message-texteditor [contenteditable]'
-        ];
+    // Function to add undo functionality to elements
+    function addUndoFunctionality(element) {
+        // Add undo event listener if not already added
+        if (!element._fixlyUndoListenerAdded) {
+            element._fixlyUndoListenerAdded = true;
 
-        // Join all selectors with commas
-        const composerSelector = messageComposerSelectors.join(', ');
+            // Create the handler function and store it for later removal
+            element._fixlyUndoHandler = function (e) {
+                // Check for Ctrl+Z or Cmd+Z (Mac)
+                if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+                    // If we have stored original text, restore it
+                    if (element._fixlyOriginalText) {
+                        e.preventDefault(); // Prevent default undo behavior
 
-        // Find all message composers
-        document.querySelectorAll(composerSelector).forEach(element => {
-            // Special handling for LinkedIn message composer
-            if (!element.hasAttribute("data-fixly-button-added")) {
-                // Add a mutation observer specifically for this element to detect placeholder changes
-                const placeholderObserver = new MutationObserver((mutations) => {
-                    mutations.forEach((mutation) => {
-                        if (mutation.type === 'attributes' &&
-                            (mutation.attributeName === 'aria-hidden' ||
-                                mutation.attributeName === 'data-artdeco-is-focused')) {
-                            // When these attributes change, it might indicate the editor state changed
-                            // Force a content check on the element's fix button
-                            const buttons = document.querySelectorAll('.fixly-button');
-                            buttons.forEach(btn => {
-                                // Find the button associated with this element
-                                const rect = element.getBoundingClientRect();
-                                const btnRect = btn.getBoundingClientRect();
+                        // Apply the original text
+                        window.fixlyUtils.applyFixedText(element, element._fixlyOriginalText);
 
-                                // If the button is near this element
-                                if (Math.abs(btnRect.left - (rect.right - 40)) < 50 &&
-                                    Math.abs(btnRect.top - (rect.top + 10)) < 50) {
-                                    // Make button visible for LinkedIn message composers
-                                    btn.style.display = "inline-flex";
-                                }
-                            });
-                        }
-                    });
-                });
-
-                placeholderObserver.observe(element, {
-                    attributes: true,
-                    attributeFilter: ['aria-hidden', 'data-artdeco-is-focused', 'placeholder', 'contenteditable']
-                });
-
-                // Store the observer for cleanup
-                element._fixlyPlaceholderObserver = placeholderObserver;
-            }
-
-            addFixButton(element);
-
-            // Also check parent elements for contenteditable
-            let parent = element.parentElement;
-            while (parent && parent.tagName !== 'BODY') {
-                if (parent.isContentEditable || parent.getAttribute("contenteditable") === "true") {
-                    if (!parent.hasAttribute("data-fixly-button-added")) {
-                        addFixButton(parent);
+                        // Clear the stored original text after using it once
+                        element._fixlyOriginalText = null;
                     }
                 }
-                parent = parent.parentElement;
-            }
+            };
 
-            // Also check child elements for contenteditable
-            element.querySelectorAll('[contenteditable]').forEach(child => {
-                if (!child.hasAttribute("data-fixly-button-added")) {
-                    addFixButton(child);
-                }
-            });
-        });
-
-        // LinkedIn post composer
-        document.querySelectorAll('[role="textbox"][aria-label="Write a post"]').forEach(element => {
-            addFixButton(element);
-        });
-
-        // LinkedIn comment fields
-        document.querySelectorAll('[role="textbox"][aria-label*="comment"]').forEach(element => {
-            addFixButton(element);
-        });
-
-        // LinkedIn has specific classes for their contenteditable elements
-        document.querySelectorAll('.t-14.t-black--light.t-normal').forEach(element => {
-            if (element.isContentEditable || element.getAttribute("contenteditable")) {
-                addFixButton(element);
-            }
-        });
-
-        // Look for elements with data-placeholder attribute (LinkedIn uses these)
-        document.querySelectorAll('[data-placeholder]').forEach(element => {
-            if (element.isContentEditable || element.getAttribute("contenteditable")) {
-                addFixButton(element);
-            }
-        });
+            element.addEventListener('keydown', element._fixlyUndoHandler);
+        }
     }
 
     // Function to find and process all relevant elements
@@ -627,7 +687,8 @@ function initializeFixly() {
             ".t-normal",
             ".notranslate",
             ".flex-grow-1",
-            ".full-height"
+            ".full-height",
+            ".CodeMirror" // Add CodeMirror as a common editor class
         ];
 
         document.querySelectorAll(editorSelectors.join(", ")).forEach(element => {
@@ -636,144 +697,78 @@ function initializeFixly() {
             }
         });
 
-        // Get normalized domain without www. prefix
-        let domain = window.location.hostname;
-        if (domain.startsWith('www.')) {
-            domain = domain.substring(4);
-        }
-
-        // Apply LinkedIn-specific fixes - but only if we're not using the direct button approach
-        if (domain.includes("linkedin.com") && !window.fixlyUsingDirectButtons) {
-            addLinkedInFixes();
-        }
-        
-        // Apply otodom.pl-specific fixes
-        if (domain.includes("otodom.pl")) {
-            addOtodomFixes();
-        }
-    }
-
-    // Function for otodom.pl specific fixes
-    function addOtodomFixes() {
-        // Try multiple selectors that might match the message form on otodom.pl
-        const possibleSelectors = [
-            'textarea[placeholder*="wiadomość"]',
-            'textarea[placeholder*="tesst"]', // From the screenshot
-            'textarea[name*="message"]',
-            'textarea.form-control',
-            'div[data-testid*="message"]',
-            'div[data-testid*="textarea"]',
-            // Common form input classes
-            '.form-control',
-            '.message-input',
-            '.contact-form textarea',
-            // Specific selectors from screenshot
-            'textarea', // Try all textareas
-            '[placeholder*="tesst"]',
-            'textarea[name="tesst"]'
-        ];
-        
-        // Try each selector
-        possibleSelectors.forEach(selector => {
-            document.querySelectorAll(selector).forEach(element => {
-                if (!element.hasAttribute("data-fixly-button-added")) {
-                    console.log('Fixly: Found otodom.pl textarea element', selector);
-                    addFixButton(element);
+        // Try to access iframe contents if they're from the same origin
+        try {
+            document.querySelectorAll('iframe').forEach(iframe => {
+                try {
+                    // This will throw if cross-origin
+                    const iframeDocument = iframe.contentDocument || iframe.contentWindow.document;
                     
-                    // Force the button to be shown since we know this is a textarea
-                    if (element._fixlyButton) {
-                        element._fixlyButton.style.display = "inline-flex";
-                    }
+                    // Apply the same logic to the iframe's content
+                    iframeDocument.querySelectorAll("textarea, input[type='text']").forEach(addFixButton);
+                    iframeDocument.querySelectorAll("[contenteditable='true']").forEach(addFixButton);
+                    iframeDocument.querySelectorAll("[contenteditable='']").forEach(addFixButton);
+                    iframeDocument.querySelectorAll("[contenteditable]").forEach(element => {
+                        if (element.isContentEditable) {
+                            addFixButton(element);
+                        }
+                    });
+                    
+                    // Look for editor elements in the iframe
+                    iframeDocument.querySelectorAll("[role='textbox']").forEach(addFixButton);
+                    iframeDocument.querySelectorAll(editorSelectors.join(", ")).forEach(element => {
+                        if (element.isContentEditable || element.getAttribute("contenteditable")) {
+                            addFixButton(element);
+                        }
+                    });
+                } catch (e) {
+                    // Silently fail on cross-origin iframe access
+                    console.log("Could not access iframe content due to same-origin policy");
                 }
             });
-        });
+        } catch (e) {
+            console.log("Error processing iframes:", e);
+        }
+
+        // Get domain and check for site adapter
+        const domain = window.fixlyUtils.getNormalizedDomain();
+        const siteAdapter = window.fixlyAdapters.getAdapterForSite(domain);
         
-        // Special handling for otodom's contact form
-        // Try to find specific form elements from the screenshot
-        const formSelectors = [
-            '[placeholder*="Email"]',
-            '[placeholder*="Imię"]',
-            '[placeholder*="telefonu"]'
-        ];
-        
-        formSelectors.forEach(selector => {
-            const formFields = document.querySelectorAll(selector);
-            if (formFields.length > 0) {
-                // We found form fields that match otodom's contact form
-                // Let's look for siblings that might be the message field
-                formFields.forEach(field => {
-                    // Look for parent form or container
-                    let container = field.closest('form');
-                    if (!container) {
-                        container = field.closest('div');
-                    }
-                    
-                    // If we found a container, look for textareas inside it
-                    if (container) {
-                        container.querySelectorAll('textarea').forEach(textarea => {
-                            if (!textarea.hasAttribute("data-fixly-button-added")) {
-                                console.log('Fixly: Found otodom.pl textarea in form');
-                                addFixButton(textarea);
-                                
-                                // Force the button to be visible since this is definitely a textarea
-                                if (textarea._fixlyButton) {
-                                    textarea._fixlyButton.style.display = "inline-flex";
-                                }
-                            }
-                        });
-                    }
-                });
-            }
-        });
-        
-        // Also attempt to find iframes that might contain the message form
-        document.querySelectorAll('iframe').forEach(iframe => {
-            try {
-                // Try to access iframe content - this will fail if cross-origin
-                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                
-                // Look for textarea elements inside the iframe
-                iframeDoc.querySelectorAll('textarea').forEach(element => {
-                    if (!element.hasAttribute("data-fixly-button-added")) {
-                        console.log('Fixly: Found textarea in iframe');
-                        addFixButton(element);
-                    }
-                });
-            } catch (e) {
-                // Access denied to iframe (cross-origin)
-                console.log('Fixly: Cannot access iframe content due to same-origin policy');
-            }
-        });
+        // Use site-specific processor if available
+        if (siteAdapter && typeof siteAdapter.processElements === 'function') {
+            siteAdapter.processElements(addFixButton);
+        }
     }
 
     // Initial processing with delay to ensure page is fully loaded
     setTimeout(processElements, 1000);
 
-    // Get normalized domain without www. prefix
-    let domain = window.location.hostname;
-    if (domain.startsWith('www.')) {
-        domain = domain.substring(4);
-    }
-
-    // For LinkedIn, we'll use either the direct button approach OR the standard approach, not both
-    if (domain.includes("linkedin.com")) {
-        // Set a flag to indicate we're using the direct button approach
-        window.fixlyUsingDirectButtons = true;
-
-        // Initial call with delay
-        setTimeout(addLinkedInMessageComposerButton, 2000);
-
-        // Periodic calls for the direct button approach
-        setInterval(addLinkedInMessageComposerButton, 3000);
-    }
+    // Get normalized domain and check for site adapter
+    const domain = window.fixlyUtils.getNormalizedDomain();
+    const siteAdapter = window.fixlyAdapters.getAdapterForSite(domain);
     
-    // For otodom.pl, add extra processing to try to find the message compose form
-    if (domain.includes("otodom.pl")) {
-        // Initial call with delay to ensure page is fully loaded
-        setTimeout(addOtodomFixes, 2000);
+    // Set up site-specific periodic processes if needed
+    if (siteAdapter) {
+        // For sites that need special handling of direct buttons
+        if (domain.includes("linkedin.com") && typeof siteAdapter.addDirectMessageButton === 'function') {
+            // Set a flag to indicate we're using the direct button approach
+            window.fixlyUsingDirectButtons = true;
+
+            // Initial call with delay
+            setTimeout(siteAdapter.addDirectMessageButton, 2000);
+
+            // Periodic calls for the direct button approach
+            setInterval(siteAdapter.addDirectMessageButton, 3000);
+        }
         
-        // Periodic calls to catch dynamically loaded forms
-        setInterval(addOtodomFixes, 3000);
+        // Special handling for W3Schools
+        if (domain.includes("w3schools.com") && typeof siteAdapter.processElements === 'function') {
+            // Initial call with longer delay to ensure frames are loaded
+            setTimeout(() => siteAdapter.processElements(addFixButton), 2000);
+            
+            // Periodic calls to handle dynamic changes in the editor
+            setInterval(() => siteAdapter.processElements(addFixButton), 3000);
+        }
     }
 
     // Monitor for dynamically added elements
@@ -782,6 +777,31 @@ function initializeFixly() {
 
         mutations.forEach((mutation) => {
             if (mutation.addedNodes && mutation.addedNodes.length > 0) {
+                // Check specifically for added textareas or elements that might be editors
+                for (let i = 0; i < mutation.addedNodes.length; i++) {
+                    const node = mutation.addedNodes[i];
+                    if (node.nodeType === 1) { // Element node
+                        if (node.tagName === 'TEXTAREA' || 
+                            node.hasAttribute('contenteditable') || 
+                            node.getAttribute('role') === 'textbox') {
+                            // If we find a direct text editor element, process it immediately
+                            addFixButton(node);
+                        } else if (node.querySelector) {
+                            // Check for any relevant elements inside the added node
+                            const textareas = node.querySelectorAll('textarea');
+                            if (textareas.length > 0) {
+                                textareas.forEach(addFixButton);
+                                shouldProcess = true;
+                            }
+                            
+                            const editables = node.querySelectorAll('[contenteditable]');
+                            if (editables.length > 0) {
+                                editables.forEach(addFixButton);
+                                shouldProcess = true;
+                            }
+                        }
+                    }
+                }
                 shouldProcess = true;
             } else if (mutation.attributeName === "contenteditable" || mutation.attributeName === "role") {
                 shouldProcess = true;
@@ -790,17 +810,6 @@ function initializeFixly() {
 
         if (shouldProcess) {
             processElements();
-
-            // Get normalized domain without www. prefix
-            let domain = window.location.hostname;
-            if (domain.startsWith('www.')) {
-                domain = domain.substring(4);
-            }
-
-            // Apply LinkedIn-specific fixes if on LinkedIn - but only if not using direct buttons
-            if (domain.includes("linkedin.com") && !window.fixlyUsingDirectButtons) {
-                addLinkedInFixes();
-            }
         }
     });
 
@@ -815,243 +824,5 @@ function initializeFixly() {
     // without triggering mutations (some frameworks do this)
     setInterval(() => {
         processElements();
-
-        // Get normalized domain without www. prefix
-        let domain = window.location.hostname;
-        if (domain.startsWith('www.')) {
-            domain = domain.substring(4);
-        }
-
-        // Apply LinkedIn-specific fixes if on LinkedIn - but only if not using direct buttons
-        if (domain.includes("linkedin.com") && !window.fixlyUsingDirectButtons) {
-            addLinkedInFixes();
-        }
     }, 2000);
-
-    // Function to directly add a fix button to LinkedIn's message composer
-    // This is a more aggressive approach that bypasses the normal detection
-    function addLinkedInMessageComposerButton() {
-        // First, clean up any existing direct buttons to prevent duplicates
-        document.querySelectorAll('.fixly-direct-button').forEach(button => {
-            // Check if the button's associated element still exists
-            const rect = button.getBoundingClientRect();
-            const elementsAtPoint = document.elementsFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
-            const hasAssociatedElement = elementsAtPoint.some(el =>
-                el.hasAttribute("data-fixly-direct-button") ||
-                el.hasAttribute("data-fixly-button-added")
-            );
-
-            // If no associated element exists, remove the button
-            if (!hasAssociatedElement) {
-                button.remove();
-            }
-        });
-
-        // Try to find the message composer using various selectors
-        const selectors = [
-            '.msg-form__contenteditable',
-            '[role="textbox"][data-placeholder="Write a message…"]',
-            '.msg-form__message-texteditor [contenteditable]',
-            '.msg-form__message-texteditor'
-        ];
-
-        for (const selector of selectors) {
-            const elements = document.querySelectorAll(selector);
-            if (elements.length > 0) {
-                elements.forEach(element => {
-                    // Skip if already processed by either method
-                    if (element.hasAttribute("data-fixly-direct-button") || element.hasAttribute("data-fixly-button-added")) {
-                        return;
-                    }
-
-                    // Mark as processed
-                    element.setAttribute("data-fixly-direct-button", "true");
-
-                    // Create a button directly in the element's parent
-                    const button = document.createElement("span");
-                    button.innerText = "✨";
-                    button.style.position = "absolute";
-                    button.style.zIndex = "999999";
-                    button.style.fontSize = "22px";
-                    button.style.padding = "0"; // Remove padding since we're using fixed width/height with flexbox
-                    button.style.cursor = "pointer";
-                    button.style.backgroundColor = "rgba(255, 255, 255, 0.9)";
-                    button.style.borderRadius = "50%";
-                    button.style.boxShadow = "0 2px 5px rgba(0,0,0,0.2)";
-                    button.style.userSelect = "none";
-                    button.style.height = "32px"; // Increased fixed height
-                    button.style.width = "32px"; // Increased fixed width
-                    button.style.lineHeight = "32px"; // Align text vertically
-                    button.style.textAlign = "center"; // Center text horizontally
-                    button.style.display = "inline-flex"; // Use flexbox for better centering
-                    button.style.alignItems = "center"; // Center vertically with flexbox
-                    button.style.justifyContent = "center"; // Center horizontally with flexbox
-                    button.title = "Fix text with AI";
-                    button.className = "fixly-direct-button";
-
-                    // Position the button
-                    const rect = element.getBoundingClientRect();
-                    button.style.top = `${rect.top + window.scrollY + 10}px`;
-                    button.style.left = `${rect.right + window.scrollX - 40}px`;
-
-                    // Add hover effect
-                    button.onmouseover = () => {
-                        button.style.transform = "scale(1.2)";
-                        button.style.transition = "transform 0.2s";
-                    };
-                    button.onmouseout = () => {
-                        button.style.transform = "scale(1)";
-                    };
-
-                    // Add click handler
-                    button.addEventListener("click", () => {
-                        // Show loading state
-                        const originalText = button.innerText;
-                        button.innerText = "⏳";
-
-                        // Get text content
-                        const textContent = element.innerText || element.textContent;
-
-                        // Get API key from Chrome storage
-                        chrome.storage.sync.get(['openai_api_key'], (result) => {
-                            if (!result.openai_api_key) {
-                                alert("Please set your OpenAI API key in the Fixly extension settings.");
-                                button.innerText = originalText;
-                                return;
-                            }
-
-                            chrome.runtime.sendMessage({
-                                action: "fixText",
-                                text: textContent,
-                                apiKey: result.openai_api_key
-                            }, response => {
-                                if (response.fixedText) {
-                                    // Focus the element
-                                    element.focus();
-
-                                    // Use execCommand to replace text
-                                    if (document.createRange && window.getSelection) {
-                                        const range = document.createRange();
-                                        range.selectNodeContents(element);
-                                        const selection = window.getSelection();
-                                        selection.removeAllRanges();
-                                        selection.addRange(range);
-
-                                        document.execCommand('delete', false, null);
-                                        document.execCommand('insertText', false, response.fixedText);
-                                    } else {
-                                        element.innerText = response.fixedText;
-                                    }
-
-                                    // Trigger events
-                                    element.dispatchEvent(new Event('input', { bubbles: true }));
-                                    element.dispatchEvent(new KeyboardEvent('keypress', {
-                                        bubbles: true,
-                                        cancelable: true,
-                                        key: ' ',
-                                        keyCode: 32
-                                    }));
-                                } else {
-                                    alert("Error: " + (response.error || "Unknown error occurred"));
-                                }
-
-                                // Reset button
-                                button.innerText = originalText;
-                                button.style.display = "inline-flex"; // Ensure display is set to inline-flex
-                            });
-                        });
-                    });
-
-                    // Add to document
-                    document.body.appendChild(button);
-
-                    // Update position on scroll and resize
-                    const updatePosition = () => {
-                        if (!document.body.contains(element)) {
-                            button.remove();
-                            return;
-                        }
-
-                        const updatedRect = element.getBoundingClientRect();
-                        button.style.top = `${updatedRect.top + window.scrollY + 10}px`;
-                        button.style.left = `${updatedRect.right + window.scrollX - 40}px`;
-                    };
-
-                    window.addEventListener("scroll", updatePosition);
-                    window.addEventListener("resize", updatePosition);
-
-                    // Update periodically
-                    const interval = setInterval(() => {
-                        if (!document.body.contains(element)) {
-                            button.remove();
-                            clearInterval(interval);
-                            window.removeEventListener("scroll", updatePosition);
-                            window.removeEventListener("resize", updatePosition);
-                            return;
-                        }
-
-                        updatePosition();
-                    }, 500);
-                });
-
-                return; // Exit after processing the first matching selector
-            }
-        }
-    }
-
-    // Function to clean up orphaned buttons
-    function cleanupOrphanedButtons() {
-        // Clean up fixly-button elements
-        document.querySelectorAll('.fixly-button').forEach(button => {
-            // Check if the button is still visible and has an associated element
-            const rect = button.getBoundingClientRect();
-
-            // If the button is not visible (zero size or off-screen), remove it
-            if (rect.width === 0 || rect.height === 0 ||
-                rect.left < 0 || rect.top < 0 ||
-                rect.right > window.innerWidth || rect.bottom > window.innerHeight) {
-                button.remove();
-                return;
-            }
-
-            // Check if there's an element with our data attribute near the button
-            const elementsAtPoint = document.elementsFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
-            const hasAssociatedElement = elementsAtPoint.some(el =>
-                el.hasAttribute("data-fixly-button-added") ||
-                el.hasAttribute("data-fixly-direct-button")
-            );
-
-            if (!hasAssociatedElement) {
-                button.remove();
-            }
-        });
-
-        // Clean up fixly-direct-button elements
-        document.querySelectorAll('.fixly-direct-button').forEach(button => {
-            // Check if the button is still visible and has an associated element
-            const rect = button.getBoundingClientRect();
-
-            // If the button is not visible (zero size or off-screen), remove it
-            if (rect.width === 0 || rect.height === 0 ||
-                rect.left < 0 || rect.top < 0 ||
-                rect.right > window.innerWidth || rect.bottom > window.innerHeight) {
-                button.remove();
-                return;
-            }
-
-            // Check if there's an element with our data attribute near the button
-            const elementsAtPoint = document.elementsFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
-            const hasAssociatedElement = elementsAtPoint.some(el =>
-                el.hasAttribute("data-fixly-direct-button") ||
-                el.hasAttribute("data-fixly-button-added")
-            );
-
-            if (!hasAssociatedElement) {
-                button.remove();
-            }
-        });
-    }
-
-    // Run the cleanup periodically
-    setInterval(cleanupOrphanedButtons, 5000);
 }
