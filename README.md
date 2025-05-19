@@ -1,14 +1,14 @@
 # Fixly - Text Fixer Chrome Extension
 
-Fixly is a Chrome extension that adds a fix button (✨) to text input fields, textareas, and contenteditable elements. When clicked, it uses OpenAI's API to fix grammar, spelling, and improve the text.
+Fixly is a Chrome extension that helps you fix and improve selected text anywhere on the web using OpenAI's API. Simply select any text and a fix button (✨) will appear near your selection.
 
 ## Features
 
-- Adds a fix button to text inputs, textareas, and contenteditable elements
-- Uses OpenAI API to fix and improve text
-- Works on most websites, including LinkedIn, Gmail, and other sites with rich text editors
+- Works with any selected text on web pages - paragraphs, headings, or within editable fields
+- Floating button appears near your selection, similar to browser's context menu
+- Uses OpenAI API to fix grammar, spelling, and improve the text
+- Works with text selections in regular web content, inputs, textareas, and contenteditable elements
 - Customizable model selection (GPT-4o-mini by default)
-- Undo functionality: Press Ctrl+Z (Windows/Linux) or Cmd+Z (Mac) to revert AI changes
 
 ## Installation
 
@@ -26,37 +26,29 @@ Fixly is a Chrome extension that adds a fix button (✨) to text input fields, t
 2. Enter your OpenAI API key (starts with `sk-`)
 3. Select your preferred model (default is `gpt-4o-mini`)
 4. Click "Save Settings"
-5. Navigate to any website with text inputs or contenteditable elements
-6. Type some text in an input field or contenteditable element
-7. Look for the ✨ button that appears near the element
-8. Click the button to fix and improve your text
-9. If you want to revert the changes, press Ctrl+Z (Windows/Linux) or Cmd+Z (Mac) immediately after the AI makes changes
+5. Navigate to any website
+6. Select any text - in paragraphs, input fields, or contenteditable elements
+7. A floating ✨ button will appear near your selection
+8. Click the button to fix and improve the selected text
 
 ## Debugging
 
-If the fix button doesn't appear on contenteditable elements, try the following:
+If the fix button doesn't appear when selecting text, try the following:
 
 1. Open Chrome DevTools (F12 or right-click > Inspect)
 2. Go to the Console tab to check for any error messages
 3. Look for log messages from the extension (they start with "Fixly")
 4. Make sure the extension has permission to run on the current website
 5. Try reloading the page after the extension is loaded
-6. Test with the included `test.html` file to verify the extension works correctly
-
-### Testing with test.html
-
-1. Open the `test.html` file in Chrome
-2. The page contains various types of contenteditable elements
-3. Verify that the fix button appears when you type in each element
-4. If the button appears in the test page but not on other websites, there might be specific issues with those websites
+6. Test on different websites to verify the extension works correctly
 
 ## Troubleshooting
 
 ### Fix Button Not Appearing
 
-- Make sure you've entered text in the field (buttons only appear when there's content)
-- Some websites use complex editors that might prevent the button from appearing
-- Try clicking in and out of the field to trigger the button
+- Make sure you've selected text (the button only appears when text is selected)
+- Some websites might prevent selection or use complex editors
+- Try selecting text in different areas of the page
 - Check the console for any error messages
 
 ### Button Appears But Doesn't Work
@@ -65,23 +57,15 @@ If the fix button doesn't appear on contenteditable elements, try the following:
 - Check the console for API error messages
 - Make sure you have an internet connection
 
-### Undo Functionality Not Working
-
-- Make sure to press Ctrl+Z (Windows/Linux) or Cmd+Z (Mac) while the text field is still in focus
-- The undo functionality only works once per AI fix
-- Some complex editors might override the standard undo behavior
-- Try clicking in the field again if the focus was lost
-
 ## Technical Details
 
 The extension works by:
 
-1. Injecting a content script that scans the page for text inputs and contenteditable elements
-2. Adding a fix button next to these elements
-3. When clicked, sending the text to the background script
+1. Injecting a content script that monitors text selections on the page
+2. When text is selected, displaying a floating button near the cursor
+3. When clicked, sending the selected text to the background script
 4. The background script calls the OpenAI API to fix the text
-5. The fixed text is then inserted back into the original element
-6. The original text is stored temporarily to enable undo functionality
+5. The fixed text is then inserted back at the location of the original selection
 
 ## License
 

@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2025-05-19
+
+### Changed
+- Completely redesigned text selection mechanism
+- Replaced per-input field buttons with a single floating button
+- Button now appears near cursor when text is selected, similar to browser's default context menu
+- Extended functionality to work with regular text on web pages, not just input fields
+
+### Improved
+- Better support for selecting text in textareas, input fields, and contenteditable elements
+- More intuitive UI with button appearing only when text is actively selected
+- Button automatically disappears when clicking elsewhere on the page
+- Reduced DOM manipulation for improved performance
+
 ## [1.0.0] - 2025-03-14
 
 ### Added
@@ -17,5 +31,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Customizable model selection
 - Undo functionality (Ctrl+Z/Cmd+Z)
 
-[Unreleased]: https://github.com/yourusername/fixly/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/yourusername/fixly/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/yourusername/fixly/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/yourusername/fixly/releases/tag/v1.0.0 
