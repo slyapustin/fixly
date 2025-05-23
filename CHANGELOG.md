@@ -7,7 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.1.0] - 2025-05-19
+## [1.2.0] - 2024-05-31
+
+### Added
+- Support for locally-running Ollama LLM models
+- Option to choose between OpenAI API and Ollama in settings
+- Configuration options for Ollama URL and model selection
+
+### Changed
+- Updated popup UI to accommodate provider selection
+- Improved error handling for both OpenAI and Ollama requests
+
+## [1.1.0] - 2024-05-30
 
 ### Changed
 - Completely redesigned text selection mechanism
@@ -31,6 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Customizable model selection
 - Undo functionality (Ctrl+Z/Cmd+Z)
 
-[Unreleased]: https://github.com/yourusername/fixly/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/yourusername/fixly/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/yourusername/fixly/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/yourusername/fixly/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/yourusername/fixly/releases/tag/v1.0.0 

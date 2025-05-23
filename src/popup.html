@@ -123,6 +123,29 @@
         .small-button:hover {
             background-color: #3367d6;
         }
+
+        .provider-settings {
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .radio-group {
+            margin-bottom: 10px;
+        }
+
+        .radio-label {
+            display: inline-flex;
+            align-items: center;
+            margin-right: 10px;
+            font-weight: normal;
+            cursor: pointer;
+        }
+
+        .radio-label input {
+            margin-right: 5px;
+        }
     </style>
 </head>
 
@@ -130,19 +153,58 @@
     <h2>Fixly Settings</h2>
 
     <div class="form-group">
-        <label for="apiKeyInput">OpenAI API Key:</label>
-        <input type="text" id="apiKeyInput" placeholder="sk-..." />
-        <div class="key-info">
-            Your API key is stored locally and is only sent to OpenAI when fixing text.
-            <a href="https://platform.openai.com/api-keys" target="_blank">Get an API key</a>
+        <label>LLM Provider:</label>
+        <div class="radio-group">
+            <label class="radio-label">
+                <input type="radio" name="provider" value="openai" id="providerOpenAI" checked />
+                OpenAI
+            </label>
+            <label class="radio-label">
+                <input type="radio" name="provider" value="ollama" id="providerOllama" />
+                Ollama (Local)
+            </label>
         </div>
     </div>
 
-    <div class="form-group">
-        <label for="modelInput">AI Model:</label>
-        <input type="text" id="modelInput" placeholder="gpt-4o-mini" />
-        <div class="model-info">
-            Default: gpt-4o-mini. Other options: gpt-4o, gpt-4, gpt-3.5-turbo, or any new OpenAI model.
+    <div id="openaiSettings" class="provider-settings">
+        <div class="form-group">
+            <label for="apiKeyInput">OpenAI API Key:</label>
+            <input type="text" id="apiKeyInput" placeholder="sk-..." />
+            <div class="key-info">
+                Your API key is stored locally and is only sent to OpenAI when fixing text.
+                <a href="https://platform.openai.com/api-keys" target="_blank">Get an API key</a>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="modelInput">OpenAI Model:</label>
+            <input type="text" id="modelInput" placeholder="gpt-4o-mini" />
+            <div class="model-info">
+                Default: gpt-4o-mini. Other options: gpt-4o, gpt-4, gpt-3.5-turbo, or any new OpenAI model.
+            </div>
+        </div>
+    </div>
+
+    <div id="ollamaSettings" class="provider-settings" style="display: none;">
+        <div class="form-group">
+            <label for="ollamaUrlInput">Ollama URL:</label>
+            <input type="text" id="ollamaUrlInput" placeholder="http://localhost:11434" />
+            <div class="model-info">
+                URL of your locally running Ollama instance. Default: http://localhost:11434
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="ollamaModelInput">Ollama Model:</label>
+            <input type="text" id="ollamaModelInput" placeholder="llama3" />
+            <div class="model-info">
+                Model name that's available in your Ollama instance. Examples: llama3, mistral, gemma
+            </div>
+        </div>
+        
+        <div class="model-info" style="padding-top: 5px; border-top: 1px solid #eee; margin-top: 10px; color: #d14836;">
+            <strong>Important:</strong> Ollama needs CORS headers enabled to work with browser extensions.<br>
+            Run Ollama with: <code>OLLAMA_ORIGINS="*" ollama serve</code>
         </div>
     </div>
 
@@ -163,14 +225,10 @@
 
     <div class="feature-info">
         <h3><span style="font-weight: bold;">&#x1F195; New Features!</span></h3>
-        <p>Fixly now works with rich text editors like LinkedIn messages, Gmail, and other platforms that use
-            contenteditable elements.</p>
-        <p>The sparkles emoji (&#x2728;) will appear inside your message box only when you've typed something - click it
-            to
-            magically fix your text!</p>
-        <p>Smarter text processing: if your text is already perfect, Fixly will keep it unchanged instead of showing
-            error messages.</p>
-        <p>Custom model support: Enter any OpenAI model name to use the latest models as soon as they're released.</p>
+        <p>Fixly now supports both OpenAI API and locally running Ollama models!</p>
+        <p>Select text anywhere on the web and a floating button will appear to help you fix it.</p>
+        <p>Works with any text selection - in paragraphs, input fields, or contenteditable elements.</p>
+        <p>Smarter text processing: if your text is already perfect, Fixly will keep it unchanged.</p>
     </div>
 
     <script src="popup.js"></script>

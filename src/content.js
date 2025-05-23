@@ -179,20 +179,28 @@ floatingBtn.addEventListener('click', () => {
         return;
     }
 
-    // Get API key from Chrome storage
-    chrome.storage.sync.get(['openai_api_key'], (result) => {
-        if (!result.openai_api_key) {
-            alert("Please set your OpenAI API key in the Fixly extension settings.");
-            resetButtonState();
-            return;
+    // Get provider and settings from Chrome storage
+    chrome.storage.sync.get(['provider', 'openai_api_key'], (result) => {
+        const provider = result.provider || 'openai';
+
+        // Create request object
+        const request = {
+            action: "fixText",
+            text: selectedText
+        };
+
+        // Add apiKey for OpenAI
+        if (provider === 'openai') {
+            if (!result.openai_api_key) {
+                alert("Please set your OpenAI API key in the Fixly extension settings.");
+                resetButtonState();
+                return;
+            }
+            request.apiKey = result.openai_api_key;
         }
 
         // Send message to background script
-        chrome.runtime.sendMessage({
-            action: "fixText",
-            text: selectedText,
-            apiKey: result.openai_api_key
-        }, response => {
+        chrome.runtime.sendMessage(request, response => {
             if (response.fixedText) {
                 // Apply fixed text to selection
                 applyFixedText(response.fixedText);
