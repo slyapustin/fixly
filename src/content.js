@@ -1,59 +1,33 @@
 (() => {
-  const BUTTON_ID = 'fixlyFloatingBtn';
+  let lastSelectionState = null;
 
-  let selectionState = null;
-  let hideTimer = null;
+  function showToast(message, kind = 'info') {
+    const existing = document.getElementById('fixly-toast');
+    if (existing) existing.remove();
 
-  const btn = document.createElement('button');
-  btn.id = BUTTON_ID;
-  btn.type = 'button';
-  btn.title = 'Fix selected text with AI';
-  btn.textContent = '✨';
-  Object.assign(btn.style, {
-    position: 'absolute',
-    display: 'none',
-    zIndex: '2147483647',
-    padding: '5px',
-    cursor: 'pointer',
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: '50%',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.22)',
-    border: 'none',
-    height: '32px',
-    width: '32px',
-    lineHeight: '1',
-    fontSize: '20px',
-    fontFamily: 'Arial, sans-serif',
-    userSelect: 'none',
-    alignItems: 'center',
-    justifyContent: 'center',
-  });
+    const toast = document.createElement('div');
+    toast.id = 'fixly-toast';
+    toast.textContent = message;
 
-  btn.onmouseover = () => {
-    btn.style.transform = 'scale(1.15)';
-    btn.style.transition = 'transform 0.12s';
-  };
-  btn.onmouseout = () => {
-    btn.style.transform = 'scale(1)';
-  };
+    const bg = kind === 'success' ? '#0f766e' : kind === 'error' ? '#b91c1c' : '#111827';
 
-  function appendButton() {
-    if (!document.body || document.getElementById(BUTTON_ID)) return;
-    document.body.appendChild(btn);
-  }
+    Object.assign(toast.style, {
+      position: 'fixed',
+      right: '16px',
+      bottom: '16px',
+      zIndex: '2147483647',
+      background: bg,
+      color: '#fff',
+      padding: '10px 12px',
+      borderRadius: '10px',
+      fontSize: '13px',
+      lineHeight: '1.3',
+      boxShadow: '0 8px 20px rgba(0,0,0,.25)',
+      maxWidth: '360px',
+    });
 
-  function showButtonAt(x, y) {
-    appendButton();
-    btn.style.left = `${Math.max(8, Math.round(window.scrollX + x + 10))}px`;
-    btn.style.top = `${Math.max(8, Math.round(window.scrollY + y + 12))}px`;
-    btn.style.display = 'flex';
-  }
-
-  function hideButtonSoon(ms = 50) {
-    if (hideTimer) clearTimeout(hideTimer);
-    hideTimer = setTimeout(() => {
-      btn.style.display = 'none';
-    }, ms);
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2200);
   }
 
   function getActiveTextField() {
@@ -65,79 +39,55 @@
   }
 
   function captureSelectionState() {
-    // 1) input/textarea selection
     const field = getActiveTextField();
     if (field && typeof field.selectionStart === 'number' && typeof field.selectionEnd === 'number') {
       const start = field.selectionStart;
       const end = field.selectionEnd;
       if (start !== end) {
-        selectionState = {
+        return {
           kind: 'field',
           element: field,
           start,
           end,
           text: field.value.slice(start, end),
         };
-
-        // best-effort placement for input/textarea: near element corner
-        const r = field.getBoundingClientRect();
-        showButtonAt(r.right - 10, r.bottom - 6);
-        return;
       }
     }
 
-    // 2) normal/contenteditable selection
     const sel = window.getSelection();
-    if (!sel || sel.rangeCount === 0 || sel.isCollapsed) {
-      selectionState = null;
-      hideButtonSoon();
-      return;
-    }
+    if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return null;
 
     const range = sel.getRangeAt(0);
     const text = sel.toString();
-    if (!text || !text.trim()) {
-      selectionState = null;
-      hideButtonSoon();
-      return;
-    }
+    if (!text || !text.trim()) return null;
 
-    selectionState = {
+    return {
       kind: 'range',
       range: range.cloneRange(),
       text,
     };
-
-    const rect = range.getBoundingClientRect();
-    showButtonAt(rect.right, rect.bottom);
   }
 
-  function getSelectedText() {
-    return selectionState?.text?.trim() || '';
-  }
+  function applyFixedText(state, fixedText) {
+    if (!state) return false;
 
-  function applyFixedText(fixedText) {
-    if (!selectionState) return false;
-
-    if (selectionState.kind === 'field') {
-      const el = selectionState.element;
+    if (state.kind === 'field') {
+      const el = state.element;
       if (!el || !el.isConnected) return false;
 
-      const before = el.value.slice(0, selectionState.start);
-      const after = el.value.slice(selectionState.end);
+      const before = el.value.slice(0, state.start);
+      const after = el.value.slice(state.end);
       el.value = before + fixedText + after;
 
-      const pos = selectionState.start + fixedText.length;
+      const pos = state.start + fixedText.length;
       el.selectionStart = el.selectionEnd = pos;
       el.dispatchEvent(new Event('input', { bubbles: true }));
       return true;
     }
 
-    if (selectionState.kind === 'range') {
-      const range = selectionState.range;
-      if (!range) return false;
-
+    if (state.kind === 'range') {
       try {
+        const range = state.range;
         range.deleteContents();
         const node = document.createTextNode(fixedText);
         range.insertNode(node);
@@ -157,12 +107,6 @@
     }
 
     return false;
-  }
-
-  function resetButtonState() {
-    btn.textContent = '✨';
-    btn.style.cursor = 'pointer';
-    btn.disabled = false;
   }
 
   async function requestFix(text) {
@@ -198,82 +142,46 @@
     });
   }
 
-  btn.addEventListener('mousedown', (e) => {
-    // prevent losing selection before click handler
-    e.preventDefault();
-  });
+  async function performFix(selectedTextFromMessage) {
+    const state = captureSelectionState();
+    lastSelectionState = state;
 
-  async function performFixFromSelection() {
-    const selectedText = getSelectedText();
-    if (!selectedText) {
-      hideButtonSoon(0);
-      return;
+    const text = (state?.text || selectedTextFromMessage || '').trim();
+    if (!text) {
+      showToast('No selected text found.', 'error');
+      return { ok: false, error: 'No selected text found.' };
     }
 
-    btn.textContent = '⏳';
-    btn.style.cursor = 'default';
-    btn.disabled = true;
+    showToast('Fixing text…', 'info');
 
     try {
-      const fixed = await requestFix(selectedText);
-      const applied = applyFixedText(fixed || selectedText);
-      if (!applied) {
-        await navigator.clipboard.writeText(fixed || selectedText);
-        alert('Could not replace text on this page. Corrected text copied to clipboard.');
+      const fixed = await requestFix(text);
+      const finalText = fixed || text;
+
+      const applied = applyFixedText(lastSelectionState, finalText);
+      if (applied) {
+        showToast('✅ Text fixed', 'success');
+      } else {
+        await navigator.clipboard.writeText(finalText);
+        showToast('📋 Fixed text copied to clipboard', 'success');
       }
+
+      return { ok: true };
     } catch (err) {
-      alert(`Error: ${err.message || 'Unknown error'}`);
-    } finally {
-      selectionState = null;
-      resetButtonState();
-      hideButtonSoon(0);
+      showToast(`❌ ${err.message || 'Fix failed'}`, 'error');
+      return { ok: false, error: err?.message || 'Fix failed' };
     }
   }
-
-  btn.addEventListener('click', async (e) => {
-    e.preventDefault();
-    await performFixFromSelection();
-  });
-
-  // selection updates
-  document.addEventListener('selectionchange', () => {
-    // debounce tiny UI jitters
-    setTimeout(captureSelectionState, 0);
-  });
-
-  document.addEventListener('keydown', (e) => {
-    // update after keyboard-driven selection changes (Shift+Arrows, Cmd/Ctrl+A)
-    if (e.shiftKey || e.key === 'a' || e.key === 'A') {
-      setTimeout(captureSelectionState, 0);
-    }
-  });
-
-  document.addEventListener('mousedown', (event) => {
-    if (event.target !== btn) hideButtonSoon();
-  });
 
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message?.action !== 'fixSelection') return;
 
-    captureSelectionState();
-    if (!getSelectedText()) {
-      sendResponse?.({ ok: false, error: 'No selection found on page.' });
-      return;
-    }
-
-    performFixFromSelection()
-      .then(() => sendResponse?.({ ok: true }))
-      .catch((err) => sendResponse?.({ ok: false, error: err?.message || 'Failed to fix selection.' }));
+    performFix(message.selectedText)
+      .then((result) => sendResponse?.(result))
+      .catch((err) => sendResponse?.({ ok: false, error: err?.message || 'Fix failed' }));
 
     return true;
   });
-
-  // initialize when body is ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', appendButton, { once: true });
-  } else {
-    appendButton();
-  }
 
   console.log('Fixly content script loaded');
 })();

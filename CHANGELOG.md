@@ -8,13 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Context menu action `Fix with Fixly` as a fallback when the floating button is hidden by complex page behavior.
+- Context menu action `Fix with Fixly` as primary trigger for fixing selected text.
 - Keyboard shortcut command (`Ctrl/Cmd + Shift + F`) to trigger fixing selected text directly.
+- Visual toast confirmations (`Fixing…`, `✅ Text fixed`, `📋 Copied`) after each action.
 
 ### Changed
-- Simplified content script selection flow to reduce edge-case bugs on complex pages/editors.
+- Simplified content script flow for context-menu/shortcut-first usage (no dependency on floating action button visibility).
 - Added stable selection snapshotting for both text fields and DOM ranges before API calls.
-- Prevented selection loss when clicking the floating button (`mousedown.preventDefault`).
 - Improved keyboard-selection behavior (`selectionchange` + keyboard-triggered updates).
 
 ### Fixed

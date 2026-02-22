@@ -12,7 +12,10 @@ chrome.runtime.onInstalled.addListener(() => {
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
     if (info.menuItemId === MENU_ID && tab?.id) {
-        chrome.tabs.sendMessage(tab.id, { action: 'fixSelection' });
+        chrome.tabs.sendMessage(tab.id, {
+            action: 'fixSelection',
+            selectedText: info.selectionText || ''
+        });
     }
 });
 
