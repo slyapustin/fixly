@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-02-22
+
 ### Added
 - Context menu action `Fix with Fixly` as primary trigger for fixing selected text.
 - Keyboard shortcut command (`Ctrl/Cmd + Shift + F`) to trigger fixing selected text directly.
@@ -62,7 +64,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Customizable model selection
 - Undo functionality (Ctrl+Z/Cmd+Z)
 
-[Unreleased]: https://github.com/slyapustin/fixly/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/slyapustin/fixly/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/slyapustin/fixly/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/slyapustin/fixly/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/slyapustin/fixly/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/slyapustin/fixly/releases/tag/v1.0.0
