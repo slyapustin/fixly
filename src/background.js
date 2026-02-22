@@ -101,7 +101,7 @@ function processWithOpenAI(originalText, systemPrompt, model, apiKey, sendRespon
                     content: `Fix this text if needed: ${originalText}`
                 }
             ],
-            max_tokens: 1000
+            max_completion_tokens: 1000
         })
     })
         .then(response => {

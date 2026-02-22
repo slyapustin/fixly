@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved keyboard-selection behavior (`selectionchange` + keyboard-triggered updates).
 
 ### Fixed
+- Switched OpenAI request param from `max_tokens` to `max_completion_tokens` for compatibility with GPT-5 mini/nano models.
 - Routed all LLM network calls through the background service worker (instead of content script) to avoid page-level local network restrictions with Ollama.
 - Improved Ollama endpoint handling to support both `/api/chat` and OpenAI-compatible `/v1/chat/completions` setups.
 - Added host permissions for local Ollama endpoints (`localhost`, `127.0.0.1`, `*.local`).
