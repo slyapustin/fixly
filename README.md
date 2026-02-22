@@ -22,8 +22,30 @@ Fixly is a Chrome extension that fixes and improves selected text using OpenAI A
 
 1. Open extension popup and configure provider/settings
 2. Select text on any page
-3. Right-click and choose **Fix with Fixly** (or use shortcut `Ctrl/Cmd + Shift + F`)
+3. Trigger fix via:
+   - Right-click → **Fix with Fixly**
+   - or shortcut: **Ctrl/Cmd + Shift + F**
 4. Fixed text is inserted in place (or copied to clipboard if page blocks replacement)
+
+## How it works now
+
+The extension now uses a single, stable flow (no floating action button):
+
+1. **Selection capture (content script)**
+   - Captures selected text from normal page selection, textarea/input, or contenteditable.
+2. **Trigger (background)**
+   - Trigger comes from context menu or keyboard shortcut.
+   - Background sends `fixSelection` command to the active tab.
+3. **LLM request (background service worker)**
+   - Content script sends text to background (`fixText`).
+   - Background calls configured provider:
+     - OpenAI: `/v1/chat/completions`
+     - Ollama: `/api/chat` (with fallback support for OpenAI-compatible `/v1/chat/completions` setups)
+4. **Apply result (content script)**
+   - Replaces selected text in-place when possible.
+   - If replacement is blocked by the page/editor, copies fixed text to clipboard.
+5. **Visual feedback**
+   - Toast notifications: `Fixing…`, `✅ Text fixed`, `📋 copied`, or error.
 
 ## Ollama Setup
 
