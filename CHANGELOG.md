@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-02-22
+
+### Changed
+- Simplified content script selection flow to reduce edge-case bugs on complex pages/editors.
+- Added stable selection snapshotting for both text fields and DOM ranges before API calls.
+- Prevented selection loss when clicking the floating button (`mousedown.preventDefault`).
+- Improved keyboard-selection behavior (`selectionchange` + keyboard-triggered updates).
+
+### Fixed
+- Better compatibility with pages where selection collapses before replacement.
+- Graceful fallback to clipboard when direct in-place replacement is blocked by page behavior.
+
 ## [1.2.1] - 2026-02-22
 
 ### Fixed
@@ -50,7 +62,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Customizable model selection
 - Undo functionality (Ctrl+Z/Cmd+Z)
 
-[Unreleased]: https://github.com/slyapustin/fixly/compare/v1.2.1...HEAD
+[Unreleased]: https://github.com/slyapustin/fixly/compare/v1.2.2...HEAD
+[1.2.2]: https://github.com/slyapustin/fixly/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/slyapustin/fixly/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/slyapustin/fixly/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/slyapustin/fixly/compare/v1.0.0...v1.1.0

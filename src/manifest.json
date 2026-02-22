@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "AI Text Fixer",
-    "version": "1.2.1",
+    "version": "1.2.2",
     "description": "Fix selected text anywhere on the web using OpenAI API or locally running Ollama models.",
     "permissions": [
         "storage",
