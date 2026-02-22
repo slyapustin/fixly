@@ -1,3 +1,32 @@
+const MENU_ID = 'fixly-fix-selection';
+
+chrome.runtime.onInstalled.addListener(() => {
+    chrome.contextMenus.removeAll(() => {
+        chrome.contextMenus.create({
+            id: MENU_ID,
+            title: 'Fix with Fixly',
+            contexts: ['selection']
+        });
+    });
+});
+
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+    if (info.menuItemId === MENU_ID && tab?.id) {
+        chrome.tabs.sendMessage(tab.id, { action: 'fixSelection' });
+    }
+});
+
+chrome.commands.onCommand.addListener((command) => {
+    if (command !== 'fix-selection') return;
+
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        const tab = tabs?.[0];
+        if (tab?.id) {
+            chrome.tabs.sendMessage(tab.id, { action: 'fixSelection' });
+        }
+    });
+});
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "fixText") {
         console.log("Received fixText request:", request.text ? request.text.substring(0, 20) + "..." : "empty");

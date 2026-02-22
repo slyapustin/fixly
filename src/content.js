@@ -203,9 +203,7 @@
     e.preventDefault();
   });
 
-  btn.addEventListener('click', async (e) => {
-    e.preventDefault();
-
+  async function performFixFromSelection() {
     const selectedText = getSelectedText();
     if (!selectedText) {
       hideButtonSoon(0);
@@ -230,6 +228,11 @@
       resetButtonState();
       hideButtonSoon(0);
     }
+  }
+
+  btn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    await performFixFromSelection();
   });
 
   // selection updates
@@ -247,6 +250,22 @@
 
   document.addEventListener('mousedown', (event) => {
     if (event.target !== btn) hideButtonSoon();
+  });
+
+  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    if (message?.action !== 'fixSelection') return;
+
+    captureSelectionState();
+    if (!getSelectedText()) {
+      sendResponse?.({ ok: false, error: 'No selection found on page.' });
+      return;
+    }
+
+    performFixFromSelection()
+      .then(() => sendResponse?.({ ok: true }))
+      .catch((err) => sendResponse?.({ ok: false, error: err?.message || 'Failed to fix selection.' }));
+
+    return true;
   });
 
   // initialize when body is ready

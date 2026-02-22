@@ -1,11 +1,12 @@
 {
     "manifest_version": 3,
     "name": "AI Text Fixer",
-    "version": "1.2.2",
+    "version": "1.2.3",
     "description": "Fix selected text anywhere on the web using OpenAI API or locally running Ollama models.",
     "permissions": [
         "storage",
-        "activeTab"
+        "activeTab",
+        "contextMenus"
     ],
     "host_permissions": [
         "https://api.openai.com/*",
@@ -36,5 +37,14 @@
         "16": "icon.png",
         "48": "icon.png",
         "128": "icon.png"
+    },
+    "commands": {
+        "fix-selection": {
+            "suggested_key": {
+                "default": "Ctrl+Shift+F",
+                "mac": "Command+Shift+F"
+            },
+            "description": "Fix selected text with Fixly"
+        }
     }
 }
