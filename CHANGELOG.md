@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-02-22
+
+### Fixed
+- Routed all LLM network calls through the background service worker (instead of content script) to avoid page-level local network restrictions with Ollama.
+- Improved Ollama endpoint handling to support both `/api/chat` and OpenAI-compatible `/v1/chat/completions` setups.
+- Added host permissions for local Ollama endpoints (`localhost`, `127.0.0.1`, `*.local`).
+- Improved floating button placement for keyboard-based selections (no mouse coordinates).
+
 ## [1.2.0] - 2024-05-31
 
 ### Added
@@ -42,7 +50,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Customizable model selection
 - Undo functionality (Ctrl+Z/Cmd+Z)
 
-[Unreleased]: https://github.com/yourusername/fixly/compare/v1.2.0...HEAD
-[1.2.0]: https://github.com/yourusername/fixly/compare/v1.1.0...v1.2.0
-[1.1.0]: https://github.com/yourusername/fixly/compare/v1.0.0...v1.1.0
-[1.0.0]: https://github.com/yourusername/fixly/releases/tag/v1.0.0 
+[Unreleased]: https://github.com/slyapustin/fixly/compare/v1.2.1...HEAD
+[1.2.1]: https://github.com/slyapustin/fixly/compare/v1.2.0...v1.2.1
+[1.2.0]: https://github.com/slyapustin/fixly/compare/v1.1.0...v1.2.0
+[1.1.0]: https://github.com/slyapustin/fixly/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/slyapustin/fixly/releases/tag/v1.0.0 
