@@ -7,16 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.2.3] - 2026-02-22
-
 ### Added
 - Context menu action `Fix with Fixly` as a fallback when the floating button is hidden by complex page behavior.
 - Keyboard shortcut command (`Ctrl/Cmd + Shift + F`) to trigger fixing selected text directly.
-
-### Fixed
-- Improved GitHub/editor compatibility by allowing fix flow via runtime message trigger even when inline button visibility is unreliable.
-
-## [1.2.2] - 2026-02-22
 
 ### Changed
 - Simplified content script selection flow to reduce edge-case bugs on complex pages/editors.
@@ -25,16 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved keyboard-selection behavior (`selectionchange` + keyboard-triggered updates).
 
 ### Fixed
-- Better compatibility with pages where selection collapses before replacement.
-- Graceful fallback to clipboard when direct in-place replacement is blocked by page behavior.
-
-## [1.2.1] - 2026-02-22
-
-### Fixed
 - Routed all LLM network calls through the background service worker (instead of content script) to avoid page-level local network restrictions with Ollama.
 - Improved Ollama endpoint handling to support both `/api/chat` and OpenAI-compatible `/v1/chat/completions` setups.
 - Added host permissions for local Ollama endpoints (`localhost`, `127.0.0.1`, `*.local`).
-- Improved floating button placement for keyboard-based selections (no mouse coordinates).
+- Better compatibility with pages where selection collapses before replacement.
+- Improved GitHub/editor compatibility by allowing fix flow via runtime message trigger even when inline button visibility is unreliable.
+- Graceful fallback to clipboard when direct in-place replacement is blocked by page behavior.
 
 ## [1.2.0] - 2024-05-31
 
@@ -71,10 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Customizable model selection
 - Undo functionality (Ctrl+Z/Cmd+Z)
 
-[Unreleased]: https://github.com/slyapustin/fixly/compare/v1.2.3...HEAD
-[1.2.3]: https://github.com/slyapustin/fixly/compare/v1.2.2...v1.2.3
-[1.2.2]: https://github.com/slyapustin/fixly/compare/v1.2.1...v1.2.2
-[1.2.1]: https://github.com/slyapustin/fixly/compare/v1.2.0...v1.2.1
+[Unreleased]: https://github.com/slyapustin/fixly/compare/v1.2.0...HEAD
 [1.2.0]: https://github.com/slyapustin/fixly/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/slyapustin/fixly/compare/v1.0.0...v1.1.0
-[1.0.0]: https://github.com/slyapustin/fixly/releases/tag/v1.0.0 
+[1.0.0]: https://github.com/slyapustin/fixly/releases/tag/v1.0.0
