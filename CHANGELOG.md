@@ -13,9 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Visual toast confirmations (`Fixing…`, `✅ Text fixed`, `📋 Copied`) after each action.
 
 ### Changed
-- Simplified content script flow for context-menu/shortcut-first usage (no dependency on floating action button visibility).
+- Simplified content script flow for context-menu/shortcut-first usage.
 - Added stable selection snapshotting for both text fields and DOM ranges before API calls.
 - Improved keyboard-selection behavior (`selectionchange` + keyboard-triggered updates).
+- Removed floating-button UX/docs remnants to keep a single trigger model (context menu + shortcut).
 
 ### Fixed
 - Switched OpenAI request param from `max_tokens` to `max_completion_tokens` for compatibility with GPT-5 mini/nano models.
