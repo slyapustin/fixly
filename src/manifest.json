@@ -8,7 +8,10 @@
         "activeTab"
     ],
     "host_permissions": [
-        "https://api.openai.com/*"
+        "https://api.openai.com/*",
+        "http://localhost/*",
+        "http://127.0.0.1/*",
+        "http://*.local/*"
     ],
     "background": {
         "service_worker": "background.js"

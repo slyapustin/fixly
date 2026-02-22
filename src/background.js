@@ -106,36 +106,52 @@ function processWithOllama(originalText, systemPrompt, model, ollamaUrl, sendRes
     const modelToUse = model || 'llama3';
     console.log("Using Ollama model:", modelToUse);
     
-    // Ensure the URL ends with /api/chat
-    const baseUrl = ollamaUrl || 'http://localhost:11434';
-    const apiUrl = baseUrl.endsWith('/') 
-        ? `${baseUrl}api/chat` 
-        : `${baseUrl}/api/chat`;
-        
+    // Build Ollama endpoint robustly:
+    // - if user enters .../api/chat -> keep
+    // - if user enters .../v1 or .../v1/chat/completions -> use OpenAI-compatible endpoint
+    // - otherwise fallback to .../api/chat
+    const baseUrl = (ollamaUrl || 'http://localhost:11434').trim().replace(/\/+$/, '');
+    let apiUrl;
+
+    if (baseUrl.endsWith('/api/chat')) {
+        apiUrl = baseUrl;
+    } else if (baseUrl.endsWith('/v1') || baseUrl.endsWith('/v1/chat/completions')) {
+        apiUrl = baseUrl.endsWith('/chat/completions') ? baseUrl : `${baseUrl}/chat/completions`;
+    } else {
+        apiUrl = `${baseUrl}/api/chat`;
+    }
+
     console.log("Using Ollama URL:", apiUrl);
 
     // Note: If you get 403 Forbidden errors, you need to run Ollama with CORS headers enabled.
     // Run Ollama with: OLLAMA_ORIGINS="chrome-extension://<your-extension-id>" ollama serve
     // Or try: OLLAMA_ORIGINS="*" ollama serve (less secure, but easier for testing)
+    const isOpenAICompatEndpoint = apiUrl.endsWith('/chat/completions');
+    const payload = {
+        model: modelToUse,
+        messages: [
+            {
+                role: "system",
+                content: systemPrompt
+            },
+            {
+                role: "user",
+                content: `Fix this text if needed: ${originalText}`
+            }
+        ]
+    };
+
+    // /api/chat supports stream flag, /v1/chat/completions usually doesn't need it
+    if (!isOpenAICompatEndpoint) {
+        payload.stream = false;
+    }
+
     fetch(apiUrl, {
         method: "POST",
         headers: {
             "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-            model: modelToUse,
-            messages: [
-                {
-                    role: "system",
-                    content: systemPrompt
-                },
-                {
-                    role: "user",
-                    content: `Fix this text if needed: ${originalText}`
-                }
-            ],
-            stream: false
-        })
+        body: JSON.stringify(payload)
     })
         .then(response => {
             if (!response.ok) {

@@ -89,8 +89,24 @@ function showButton(event) {
 
 // Function to position the button at the specified coordinates
 function placeButtonAt(x, y) {
-    floatingBtn.style.top = `${window.scrollY + y + 20}px`;
-    floatingBtn.style.left = `${window.scrollX + x + 10}px`;
+    let px = x;
+    let py = y;
+
+    // keyboard selection can have no mouse coordinates
+    if (typeof px !== 'number' || typeof py !== 'number') {
+        const sel = window.getSelection();
+        if (sel && sel.rangeCount > 0) {
+            const rect = sel.getRangeAt(0).getBoundingClientRect();
+            px = rect.right;
+            py = rect.bottom;
+        } else {
+            px = 20;
+            py = 20;
+        }
+    }
+
+    floatingBtn.style.top = `${window.scrollY + py + 20}px`;
+    floatingBtn.style.left = `${window.scrollX + px + 10}px`;
     floatingBtn.style.display = 'flex';
 }
 
