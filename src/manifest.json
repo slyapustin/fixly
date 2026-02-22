@@ -5,10 +5,14 @@
     "description": "Fix selected text anywhere on the web using OpenAI API or locally running Ollama models.",
     "permissions": [
         "storage",
-        "activeTab"
+        "activeTab",
+        "contextMenus"
     ],
     "host_permissions": [
-        "https://api.openai.com/*"
+        "https://api.openai.com/*",
+        "http://localhost/*",
+        "http://127.0.0.1/*",
+        "http://*.local/*"
     ],
     "background": {
         "service_worker": "background.js"
@@ -33,5 +37,14 @@
         "16": "icon.png",
         "48": "icon.png",
         "128": "icon.png"
+    },
+    "commands": {
+        "fix-selection": {
+            "suggested_key": {
+                "default": "Ctrl+Shift+F",
+                "mac": "Command+Shift+F"
+            },
+            "description": "Fix selected text with Fixly"
+        }
     }
 }

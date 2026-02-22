@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Context menu action `Fix with Fixly` as primary trigger for fixing selected text.
+- Keyboard shortcut command (`Ctrl/Cmd + Shift + F`) to trigger fixing selected text directly.
+- Visual toast confirmations (`Fixing…`, `✅ Text fixed`, `📋 Copied`) after each action.
+
+### Changed
+- Simplified content script flow for context-menu/shortcut-first usage.
+- Added stable selection snapshotting for both text fields and DOM ranges before API calls.
+- Improved keyboard-selection behavior (`selectionchange` + keyboard-triggered updates).
+- Removed floating-button UX/docs remnants to keep a single trigger model (context menu + shortcut).
+
+### Fixed
+- Switched OpenAI request param from `max_tokens` to `max_completion_tokens` for compatibility with GPT-5 mini/nano models.
+- Routed all LLM network calls through the background service worker (instead of content script) to avoid page-level local network restrictions with Ollama.
+- Improved Ollama endpoint handling to support both `/api/chat` and OpenAI-compatible `/v1/chat/completions` setups.
+- Added host permissions for local Ollama endpoints (`localhost`, `127.0.0.1`, `*.local`).
+- Better compatibility with pages where selection collapses before replacement.
+- Improved GitHub/editor compatibility by allowing fix flow via runtime message trigger even when inline button visibility is unreliable.
+- Graceful fallback to clipboard when direct in-place replacement is blocked by page behavior.
+
 ## [1.2.0] - 2024-05-31
 
 ### Added
@@ -42,7 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Customizable model selection
 - Undo functionality (Ctrl+Z/Cmd+Z)
 
-[Unreleased]: https://github.com/yourusername/fixly/compare/v1.2.0...HEAD
-[1.2.0]: https://github.com/yourusername/fixly/compare/v1.1.0...v1.2.0
-[1.1.0]: https://github.com/yourusername/fixly/compare/v1.0.0...v1.1.0
-[1.0.0]: https://github.com/yourusername/fixly/releases/tag/v1.0.0 
+[Unreleased]: https://github.com/slyapustin/fixly/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/slyapustin/fixly/compare/v1.1.0...v1.2.0
+[1.1.0]: https://github.com/slyapustin/fixly/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/slyapustin/fixly/releases/tag/v1.0.0

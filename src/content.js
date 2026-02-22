@@ -1,227 +1,187 @@
-// Create the floating button
-let floatingBtn = document.createElement("button");
-floatingBtn.innerText = "✨"; // Sparkle emoji
-floatingBtn.id = "fixlyFloatingBtn";
-floatingBtn.title = "Fix selected text with AI";
-floatingBtn.style.position = "absolute";
-floatingBtn.style.display = "none";
-floatingBtn.style.zIndex = "99999";
-floatingBtn.style.padding = "5px";
-floatingBtn.style.cursor = "pointer";
-floatingBtn.style.backgroundColor = "rgba(255, 255, 255, 0.9)";
-floatingBtn.style.borderRadius = "50%";
-floatingBtn.style.boxShadow = "0 2px 5px rgba(0,0,0,0.2)";
-floatingBtn.style.border = "none";
-floatingBtn.style.height = "30px";
-floatingBtn.style.width = "30px";
-floatingBtn.style.lineHeight = "1";
-floatingBtn.style.fontSize = "20px";
-floatingBtn.style.fontFamily = "Arial, sans-serif";
-floatingBtn.style.userSelect = "none";
-floatingBtn.style.display = "flex";
-floatingBtn.style.alignItems = "center";
-floatingBtn.style.justifyContent = "center";
+(() => {
+  let lastSelectionState = null;
 
-// Add hover effect
-floatingBtn.onmouseover = () => {
-    floatingBtn.style.transform = "scale(1.2)";
-    floatingBtn.style.transition = "transform 0.2s";
-};
-floatingBtn.onmouseout = () => {
-    floatingBtn.style.transform = "scale(1)";
-};
+  function showToast(message, kind = 'info') {
+    const existing = document.getElementById('fixly-toast');
+    if (existing) existing.remove();
 
-// Add button to the body
-document.body.appendChild(floatingBtn);
+    const toast = document.createElement('div');
+    toast.id = 'fixly-toast';
+    toast.textContent = message;
 
-// Event listeners for text selection
-document.addEventListener('mouseup', showButton);
-document.addEventListener('keyup', showButton);
+    const bg = kind === 'success' ? '#0f766e' : kind === 'error' ? '#b91c1c' : '#111827';
 
-// Function to show the button when text is selected
-function showButton(event) {
-    // Check if selection is in an input or textfield
-    const active = document.activeElement;
-    const isTextField = active && (
-        active.tagName === 'TEXTAREA' || 
-        (active.tagName === 'INPUT' && active.type === 'text') ||
-        active.isContentEditable
-    );
-
-    // If in a text field, check selection
-    if (isTextField) {
-        // For contenteditable
-        if (active.isContentEditable) {
-            const selection = window.getSelection();
-            if (selection.rangeCount === 0 || selection.isCollapsed) {
-                floatingBtn.style.display = 'none';
-                return;
-            }
-            
-            // Place button near cursor
-            placeButtonAt(event.clientX, event.clientY);
-        } 
-        // For input and textarea elements
-        else {
-            const start = active.selectionStart;
-            const end = active.selectionEnd;
-            if (start === end) {
-                floatingBtn.style.display = 'none';
-                return;
-            }
-            
-            // Place button near cursor
-            placeButtonAt(event.clientX, event.clientY);
-        }
-    } 
-    // For regular text selection
-    else {
-        const selection = window.getSelection();
-        if (selection.rangeCount === 0 || selection.isCollapsed) {
-            floatingBtn.style.display = 'none';
-            return;
-        }
-        
-        // Place button near cursor
-        placeButtonAt(event.clientX, event.clientY);
-    }
-}
-
-// Function to position the button at the specified coordinates
-function placeButtonAt(x, y) {
-    floatingBtn.style.top = `${window.scrollY + y + 20}px`;
-    floatingBtn.style.left = `${window.scrollX + x + 10}px`;
-    floatingBtn.style.display = 'flex';
-}
-
-// Function to get selected text
-function getSelectedText() {
-    const active = document.activeElement;
-    let selectedText = '';
-    
-    // Handle different types of selections
-    if (active && (active.tagName === 'TEXTAREA' || (active.tagName === 'INPUT' && active.type === 'text'))) {
-        // For input and textarea elements
-        selectedText = active.value.substring(active.selectionStart, active.selectionEnd);
-    } else {
-        // For contenteditable and regular text selections
-        const selection = window.getSelection();
-        if (selection.rangeCount > 0) {
-            selectedText = selection.toString();
-        }
-    }
-    
-    return selectedText;
-}
-
-// Function to apply fixed text to the selection
-function applyFixedText(fixedText) {
-    const active = document.activeElement;
-    
-    // For input and textarea elements
-    if (active && (active.tagName === 'TEXTAREA' || (active.tagName === 'INPUT' && active.type === 'text'))) {
-        const start = active.selectionStart;
-        const end = active.selectionEnd;
-        const value = active.value;
-        
-        // Replace selected text with fixed text
-        active.value = value.substring(0, start) + fixedText + value.substring(end);
-        
-        // Set cursor position after the inserted text
-        active.selectionStart = active.selectionEnd = start + fixedText.length;
-        
-        // Trigger input event
-        const inputEvent = new Event('input', { bubbles: true });
-        active.dispatchEvent(inputEvent);
-    } 
-    // For contenteditable elements and regular text selections
-    else {
-        const selection = window.getSelection();
-        if (selection.rangeCount > 0) {
-            const range = selection.getRangeAt(0);
-            range.deleteContents();
-            range.insertNode(document.createTextNode(fixedText));
-            
-            // Collapse selection to end
-            selection.collapseToEnd();
-        }
-    }
-}
-
-// Function to reset button state
-function resetButtonState() {
-    floatingBtn.innerText = "✨";
-    floatingBtn.style.cursor = "pointer";
-    
-    // Restore hover effects
-    floatingBtn.onmouseover = () => {
-        floatingBtn.style.transform = "scale(1.2)";
-        floatingBtn.style.transition = "transform 0.2s";
-    };
-    floatingBtn.onmouseout = () => {
-        floatingBtn.style.transform = "scale(1)";
-    };
-}
-
-// Add click event listener to the button
-floatingBtn.addEventListener('click', () => {
-    // Show loading state
-    floatingBtn.innerText = "⏳";
-    floatingBtn.style.cursor = "default";
-    floatingBtn.onmouseover = null;
-    floatingBtn.onmouseout = null;
-
-    // Get selected text
-    const selectedText = getSelectedText();
-    if (!selectedText || selectedText.trim() === '') {
-        resetButtonState();
-        floatingBtn.style.display = 'none';
-        return;
-    }
-
-    // Get provider and settings from Chrome storage
-    chrome.storage.sync.get(['provider', 'openai_api_key'], (result) => {
-        const provider = result.provider || 'openai';
-
-        // Create request object
-        const request = {
-            action: "fixText",
-            text: selectedText
-        };
-
-        // Add apiKey for OpenAI
-        if (provider === 'openai') {
-            if (!result.openai_api_key) {
-                alert("Please set your OpenAI API key in the Fixly extension settings.");
-                resetButtonState();
-                return;
-            }
-            request.apiKey = result.openai_api_key;
-        }
-
-        // Send message to background script
-        chrome.runtime.sendMessage(request, response => {
-            if (response.fixedText) {
-                // Apply fixed text to selection
-                applyFixedText(response.fixedText);
-            } else {
-                alert("Error: " + (response.error || "Unknown error occurred"));
-            }
-            
-            // Reset button state and hide
-            resetButtonState();
-            floatingBtn.style.display = 'none';
-        });
+    Object.assign(toast.style, {
+      position: 'fixed',
+      right: '16px',
+      bottom: '16px',
+      zIndex: '2147483647',
+      background: bg,
+      color: '#fff',
+      padding: '10px 12px',
+      borderRadius: '10px',
+      fontSize: '13px',
+      lineHeight: '1.3',
+      boxShadow: '0 8px 20px rgba(0,0,0,.25)',
+      maxWidth: '360px',
     });
-});
 
-// Hide button when clicking elsewhere
-document.addEventListener('mousedown', (event) => {
-    // Don't hide if clicking on the button itself
-    if (event.target !== floatingBtn) {
-        floatingBtn.style.display = 'none';
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2200);
+  }
+
+  function getActiveTextField() {
+    const el = document.activeElement;
+    if (!el) return null;
+    if (el.tagName === 'TEXTAREA') return el;
+    if (el.tagName === 'INPUT' && ['text', 'search', 'email', 'url', 'tel', 'password'].includes(el.type)) return el;
+    return null;
+  }
+
+  function captureSelectionState() {
+    const field = getActiveTextField();
+    if (field && typeof field.selectionStart === 'number' && typeof field.selectionEnd === 'number') {
+      const start = field.selectionStart;
+      const end = field.selectionEnd;
+      if (start !== end) {
+        return {
+          kind: 'field',
+          element: field,
+          start,
+          end,
+          text: field.value.slice(start, end),
+        };
+      }
     }
-});
 
-// Log when the content script is loaded
-console.log("Fixly content script loaded");
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return null;
+
+    const range = sel.getRangeAt(0);
+    const text = sel.toString();
+    if (!text || !text.trim()) return null;
+
+    return {
+      kind: 'range',
+      range: range.cloneRange(),
+      text,
+    };
+  }
+
+  function applyFixedText(state, fixedText) {
+    if (!state) return false;
+
+    if (state.kind === 'field') {
+      const el = state.element;
+      if (!el || !el.isConnected) return false;
+
+      const before = el.value.slice(0, state.start);
+      const after = el.value.slice(state.end);
+      el.value = before + fixedText + after;
+
+      const pos = state.start + fixedText.length;
+      el.selectionStart = el.selectionEnd = pos;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      return true;
+    }
+
+    if (state.kind === 'range') {
+      try {
+        const range = state.range;
+        range.deleteContents();
+        const node = document.createTextNode(fixedText);
+        range.insertNode(node);
+
+        const sel = window.getSelection();
+        if (sel) {
+          sel.removeAllRanges();
+          const endRange = document.createRange();
+          endRange.setStartAfter(node);
+          endRange.collapse(true);
+          sel.addRange(endRange);
+        }
+        return true;
+      } catch (_e) {
+        return false;
+      }
+    }
+
+    return false;
+  }
+
+  async function requestFix(text) {
+    return new Promise((resolve, reject) => {
+      chrome.storage.sync.get(['provider', 'openai_api_key'], (cfg) => {
+        const provider = cfg.provider || 'openai';
+        const request = { action: 'fixText', text };
+
+        if (provider === 'openai') {
+          if (!cfg.openai_api_key) {
+            reject(new Error('Please set your OpenAI API key in Fixly settings.'));
+            return;
+          }
+          request.apiKey = cfg.openai_api_key;
+        }
+
+        chrome.runtime.sendMessage(request, (response) => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
+            return;
+          }
+          if (!response) {
+            reject(new Error('No response from background script'));
+            return;
+          }
+          if (response.error) {
+            reject(new Error(response.error));
+            return;
+          }
+          resolve((response.fixedText || '').trim());
+        });
+      });
+    });
+  }
+
+  async function performFix(selectedTextFromMessage) {
+    const state = captureSelectionState();
+    lastSelectionState = state;
+
+    const text = (state?.text || selectedTextFromMessage || '').trim();
+    if (!text) {
+      showToast('No selected text found.', 'error');
+      return { ok: false, error: 'No selected text found.' };
+    }
+
+    showToast('Fixing text…', 'info');
+
+    try {
+      const fixed = await requestFix(text);
+      const finalText = fixed || text;
+
+      const applied = applyFixedText(lastSelectionState, finalText);
+      if (applied) {
+        showToast('✅ Text fixed', 'success');
+      } else {
+        await navigator.clipboard.writeText(finalText);
+        showToast('📋 Fixed text copied to clipboard', 'success');
+      }
+
+      return { ok: true };
+    } catch (err) {
+      showToast(`❌ ${err.message || 'Fix failed'}`, 'error');
+      return { ok: false, error: err?.message || 'Fix failed' };
+    }
+  }
+
+  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    if (message?.action !== 'fixSelection') return;
+
+    performFix(message.selectedText)
+      .then((result) => sendResponse?.(result))
+      .catch((err) => sendResponse?.({ ok: false, error: err?.message || 'Fix failed' }));
+
+    return true;
+  });
+
+  console.log('Fixly content script loaded');
+})();

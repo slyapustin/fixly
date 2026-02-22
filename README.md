@@ -1,121 +1,84 @@
 # Fixly - Text Fixer Chrome Extension
 
-Fixly is a Chrome extension that helps you fix and improve selected text anywhere on the web using OpenAI's API or locally running Ollama models. Simply select any text and a fix button (✨) will appear near your selection.
+Fixly is a Chrome extension that fixes and improves selected text using OpenAI API or a locally running Ollama model.
 
 ## Features
 
-- Works with any selected text on web pages - paragraphs, headings, or within editable fields
-- Floating button appears near your selection, similar to browser's context menu
-- Uses OpenAI API or locally running Ollama to fix grammar, spelling, and improve text
-- Choose between cloud-based OpenAI models or privacy-focused local Ollama models
-- Works with text selections in regular web content, inputs, textareas, and contenteditable elements
-- Customizable model selection for both OpenAI and Ollama
+- Works with selected text on web pages, inputs, textareas, and contenteditable editors
+- Trigger from **context menu**: `Fix with Fixly`
+- Trigger from **shortcut**: `Ctrl/Cmd + Shift + F`
+- Uses OpenAI API or local Ollama
+- Visual confirmation toasts for progress/success/error
+- Configurable model selection for both OpenAI and Ollama
 
-## Installation
+## Installation (Development)
 
-### Development Installation
+1. Clone this repository
+2. Open Chrome: `chrome://extensions/`
+3. Enable **Developer mode**
+4. Click **Load unpacked** and select the `src` folder
 
-1. Clone this repository or download the source code
-2. Open Chrome and navigate to `chrome://extensions/`
-3. Enable "Developer mode" in the top right corner
-4. Click "Load unpacked" and select the `src` folder from this repository
-5. The extension should now be installed and visible in your extensions list
+## Usage
 
-### Usage
+1. Open extension popup and configure provider/settings
+2. Select text on any page
+3. Trigger fix via:
+   - Right-click → **Fix with Fixly**
+   - or shortcut: **Ctrl/Cmd + Shift + F**
+4. Fixed text is inserted in place (or copied to clipboard if page blocks replacement)
 
-1. Click on the extension icon to open the popup
-2. Choose your LLM provider (OpenAI or Ollama)
-3. For OpenAI:
-   - Enter your OpenAI API key (starts with `sk-`)
-   - Select your preferred model (default is `gpt-4o-mini`)
-4. For Ollama:
-   - Enter the URL of your Ollama instance (default is `http://localhost:11434`)
-   - Enter the name of your preferred Ollama model (e.g., `llama3`, `mistral`, `gemma`)
-5. Click "Save Settings"
-6. Navigate to any website
-7. Select any text - in paragraphs, input fields, or contenteditable elements
-8. A floating ✨ button will appear near your selection
-9. Click the button to fix and improve the selected text
+## How it works now
+
+The extension now uses a single, stable flow (no floating action button):
+
+1. **Selection capture (content script)**
+   - Captures selected text from normal page selection, textarea/input, or contenteditable.
+2. **Trigger (background)**
+   - Trigger comes from context menu or keyboard shortcut.
+   - Background sends `fixSelection` command to the active tab.
+3. **LLM request (background service worker)**
+   - Content script sends text to background (`fixText`).
+   - Background calls configured provider:
+     - OpenAI: `/v1/chat/completions`
+     - Ollama: `/api/chat` (with fallback support for OpenAI-compatible `/v1/chat/completions` setups)
+4. **Apply result (content script)**
+   - Replaces selected text in-place when possible.
+   - If replacement is blocked by the page/editor, copies fixed text to clipboard.
+5. **Visual feedback**
+   - Toast notifications: `Fixing…`, `✅ Text fixed`, `📋 copied`, or error.
 
 ## Ollama Setup
 
-To use Fixly with Ollama:
-
-1. Install Ollama from [https://ollama.com/](https://ollama.com/)
-2. Download a model by running `ollama pull llama3` (or another model of your choice)
-3. **Important**: Ollama needs to be started with CORS headers enabled to work with browser extensions
-4. Start Ollama with CORS enabled by running this command:
+1. Install Ollama: https://ollama.com/
+2. Pull model, e.g.:
+   ```bash
+   ollama pull llama3
+   ```
+3. Run with CORS allowed for extension:
    ```bash
    OLLAMA_ORIGINS="*" ollama serve
    ```
-   - For Windows, use:
-     ```
-     set OLLAMA_ORIGINS=* && ollama serve
-     ```
-   - For Mac/Linux, you can also use:
-     ```
-     env OLLAMA_ORIGINS="*" ollama serve
-     ```
-5. For better security in production, you can specify exactly which extension can access Ollama:
+   Better security (recommended):
    ```bash
    OLLAMA_ORIGINS="chrome-extension://YOUR_EXTENSION_ID" ollama serve
    ```
-   where `YOUR_EXTENSION_ID` is the ID of your Chrome extension (visible in the chrome://extensions page)
-
-6. After Ollama is running with proper CORS settings, the extension should be able to connect to it
-
-## Debugging
-
-If the fix button doesn't appear when selecting text, try the following:
-
-1. Open Chrome DevTools (F12 or right-click > Inspect)
-2. Go to the Console tab to check for any error messages
-3. Look for log messages from the extension (they start with "Fixly")
-4. Make sure the extension has permission to run on the current website
-5. Try reloading the page after the extension is loaded
-6. Test on different websites to verify the extension works correctly
 
 ## Troubleshooting
 
-### Fix Button Not Appearing
+### Ollama returns 403
+- This is CORS. Re-run Ollama with `OLLAMA_ORIGINS` as shown above.
 
-- Make sure you've selected text (the button only appears when text is selected)
-- Some websites might prevent selection or use complex editors
-- Try selecting text in different areas of the page
-- Check the console for any error messages
+### Nothing happens on page
+- Reload extension in `chrome://extensions`
+- Ensure extension has site access on target page
+- Try context menu trigger first (most reliable on complex editors)
 
-### Button Appears But Doesn't Work
+## Technical Notes
 
-- If using OpenAI, verify your API key is correct and has sufficient credits
-- If using Ollama, ensure the Ollama server is running locally
-- Check the console for API error messages
-- Make sure you have an internet connection (for OpenAI) or that Ollama is properly configured
-
-### Ollama Connection Issues
-
-- If you see "403 Forbidden" errors, this is a CORS issue. Make sure to run Ollama with `OLLAMA_ORIGINS="*" ollama serve` 
-- Verify that Ollama is actually running (try opening http://localhost:11434 in your browser)
-- Make sure the model you specified is installed in Ollama (run `ollama list` to check)
-- Try restarting Ollama with verbose logging: `OLLAMA_ORIGINS="*" OLLAMA_DEBUG=1 ollama serve`
-
-## Technical Details
-
-The extension works by:
-
-1. Injecting a content script that monitors text selections on the page
-2. When text is selected, displaying a floating button near the cursor
-3. When clicked, sending the selected text to the background script
-4. The background script calls either the OpenAI API or the Ollama API to fix the text
-5. The fixed text is then inserted back at the location of the original selection
+- Content script captures selection and applies replacement
+- Background service worker performs API calls
+- Local Ollama supports both `/api/chat` and `/v1/chat/completions` style endpoints
 
 ## License
 
-MIT License
-
-## Distribution
-
-For information about distributing this extension through GitHub Releases or the Chrome Web Store, please see [DISTRIBUTION.md](DISTRIBUTION.md).
-
-## Support
-
-For issues, feature requests, or questions, please open an issue on the GitHub repository.
+MIT
